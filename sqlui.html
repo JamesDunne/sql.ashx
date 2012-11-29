@@ -1,0 +1,321 @@
+﻿<!DOCTYPE html>
+
+<html>
+<head>
+    <title>SQL Query</title>
+    <style type="text/css">
+        body {
+            font-family: Segoe UI, Verdana, Tahoma;
+            font-size: small;
+        }
+        body, p, div, span, table, input, button, a, ol, h1, h2, h3, h4, h5, h6 {
+            border-spacing: 0px 0px;
+            padding: 0;
+            margin: 0;
+        }
+        ul, ol, li {
+            border-spacing: 0px 0px;
+            margin: 0;
+        }
+        ul, ol {
+            padding-left: 24px;
+        }
+        table td, table th {
+            padding: 0;
+            margin: 0;
+            text-align: left;
+            vertical-align: top;
+        }
+        input {
+            border: 1px solid gray;
+        }
+        textarea {
+            font-family: 'Anonymous Pro', Consolas, 'Lucida Console', monospace;
+        }
+        input.wide {
+            width: 400px;
+        }
+        .tblResults {
+            border-spacing: 0px;
+        }
+        .tblResults > thead > tr > th {
+            white-space: nowrap;
+        }
+        .nowrap {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <table border="0" style="width: 100%"><tbody><tr>
+        <td style="border-right: 1px solid">
+            <table border="0">
+                <tbody>
+                    <tr>
+                        <td class="nowrap">Username:</td>
+                        <td><input id="uid" type="text" value="username" /></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Password:</td>
+                        <td><input id="pwd" type="password" value="password" /></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Data Source:</td>
+                        <td><input id="ds" type="text" value="."/></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Initial Catalog:</td>
+                        <td><input id="ic" type="text" value="master"/></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Row Count:</td>
+                        <td><input id="rowcount" type="text" value="100"/></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="border-top: 1px solid">
+                <button id="btnConnect">Connect</button>
+                <ul id="databases"></ul>
+            </div>
+        </td>
+        <td style="width: 100%">
+            <div style="width: 100%">
+                <div style="float: right">
+                    <button type="button" id="btnExecute">Execute</button>
+                </div>
+                <div style="">
+                    <textarea name="query" id="query" rows="18" cols="80">SELECT 1</textarea>
+                </div>
+            </div>
+            <div style="clear: both; overflow-y: auto">
+                <div id="divErrors" style="display: none; overflow-x: auto">
+                    <h3>Errors</h3>
+                    <ul id="ulErrors"></ul>
+                </div>
+                <div id="divResults" style="overflow-x: auto; width: 720px; height: 720px">
+                    <h3>Results</h3>
+                    <div id="tables"></div>
+                </div>
+            </div>
+        </td>
+    </tr></tbody></table>
+    <script type="text/javascript">
+        document.onreadystatechange = function () {
+            if (document.readyState == "complete")
+                initApp();
+        };
+
+        function bindEvent(target, type, listener) {
+            if (target.addEventListener)
+                target.addEventListener(type, listener);
+            else
+                target.attachEvent('on' + type, listener);
+        }
+
+        function initApp() {
+            // Execute:
+            bindEvent(find('btnExecute'), 'click', function (e) {
+                // Get selected query text:
+                var qtextarea = find('query');
+                var selstart = qtextarea.selectionStart;
+                var selend = qtextarea.selectionEnd;
+                var query = qtextarea.value;
+                if (selend > selstart) {
+                    query = query.substring(selstart, selend);
+                }
+
+                hide('tables');
+                hide('divErrors');
+
+                // Execute query asynchronously:
+                runQuery({
+                    query: query,
+                    error: function (rsp) {
+                        var ul = find('ulErrors');
+                        clearAllChildren(ul);
+                        if (rsp.errors) {
+                            // multiple errors:
+                            for (var i = 0; i < rsp.errors.length; ++i) {
+                                // TODO: make clickable to select line in textarea!
+                                ul.appendChild(make('li')).innerText = rsp.errors[i].message;
+                            }
+                        } else {
+                            // single error:
+                            ul.appendChild(make('li')).innerText = rsp.error;
+                        }
+
+                        show('divErrors');
+                    },
+                    success: function (rsp) {
+                        var tables = find('tables');
+                        clearAllChildren(tables);
+
+                        // Enumerate all results and create tables for them:
+                        for (var n = 0; n < rsp.results.length; ++n) {
+                            var resultset = rsp.results[n];
+
+                            var tbl = tables.appendChild(make('table'));
+                            tbl.classList.add('tblResults');
+                            tbl.setAttribute('border', '1');
+
+                            var thead = tbl.appendChild(make('thead'));
+                            var tbody = tbl.appendChild(make('tbody'));
+
+                            var headrow = thead.appendChild(make('tr'));
+                            for (var i = 0; i < resultset.columns.length; ++i)
+                                headrow.appendChild(make('th')).innerText = resultset.columns[i];
+
+                            for (var r = 0; r < resultset.rows.length; ++r) {
+                                var tr = tbody.appendChild(make('tr'));
+                                var row = resultset.rows[r];
+                                for (var c = 0; c < row.length; ++c) {
+                                    var td = tr.appendChild(make('td'));
+                                    td.innerText = '' + row[c];
+                                }
+                            }
+                        }
+                        show('tables');
+                    }
+                });
+
+                return false;
+            });
+
+            // Connect:
+            bindEvent(find('btnConnect'), 'click', function (e) {
+                hide('databases');
+                runQuery({
+                    query: "SELECT * FROM sys.databases",
+                    error: function (rsp) {
+                    },
+                    success: function (rsp) {
+                        var rows = rsp.results[0].rows;
+                        var dbs = find('databases');
+                        clearAllChildren(dbs);
+                        for (var i = 0; i < rows.length; ++i) {
+                            dbs.appendChild(make('li')).innerText = rows[i][0];
+                        }
+                        show('databases');
+                    }
+                });
+                return false;
+            });
+        }
+
+        function runQuery(opts) {
+            var uid = v('uid');
+            var pwd = v('pwd');
+            var ds = v('ds');
+            var ic = v('ic');
+            var rowcount = opts.rowcount || v('rowcount');
+            var query = opts.query;
+            var error = opts.error;
+            var success = opts.success;
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', 'sql.ashx?ds=' + encodeURIComponent(ds) + '&ic=' + encodeURIComponent(ic) + '&rowcount=' + encodeURIComponent(rowcount), true);
+            xhr.setRequestHeader('Authorization', 'Basic ' + Base64.encode(uid + ':' + pwd));
+            xhr.onreadystatechange = function () {
+                if (this.readyState != 4) return;
+                var rsp = JSON.parse(this.responseText);
+                if (this.status != 200) {
+                    error(rsp);
+                } else {
+                    success(rsp);
+                }
+            };
+            xhr.send(query);
+        }
+
+        function find(id) { return document.getElementById(id); }
+        function make(tag) { return document.createElement(tag); }
+        function setProp(style, prop, value) {
+            if (style.setProperty)
+                style.setProperty(prop, value);
+            else
+                style.setAttribute(prop, value);
+        }
+
+        function hide(id) { setProp(find(id).style, 'display', 'none'); }
+        function show(id) { setProp(find(id).style, 'display', 'block'); }
+
+        function v(id) {
+            var el = find(id);
+            if (el === null) return null;
+            return el.value;
+        }
+
+        function clearAllChildren(el) {
+            while (el.firstChild) {
+                el.removeChild(el.firstChild);
+            }
+        }
+
+        var Base64 = {
+            // private property
+            _keyStr: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
+
+            // public method for encoding
+            encode: function (input) {
+                var output = "";
+                var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+                var i = 0;
+
+                while (i < input.length) {
+                    chr1 = input.charCodeAt(i++);
+                    chr2 = input.charCodeAt(i++);
+                    chr3 = input.charCodeAt(i++);
+
+                    enc1 = chr1 >> 2;
+                    enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+                    enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+                    enc4 = chr3 & 63;
+
+                    if (isNaN(chr2)) {
+                        enc3 = enc4 = 64;
+                    } else if (isNaN(chr3)) {
+                        enc4 = 64;
+                    }
+
+                    output = output +
+                        this._keyStr.charAt(enc1) + this._keyStr.charAt(enc2) +
+                        this._keyStr.charAt(enc3) + this._keyStr.charAt(enc4);
+                }
+
+                return output;
+            },
+            // public method for decoding
+            decode: function (input) {
+                var output = "";
+                var chr1, chr2, chr3;
+                var enc1, enc2, enc3, enc4;
+                var i = 0;
+
+                input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+
+                while (i < input.length) {
+                    enc1 = this._keyStr.indexOf(input.charAt(i++));
+                    enc2 = this._keyStr.indexOf(input.charAt(i++));
+                    enc3 = this._keyStr.indexOf(input.charAt(i++));
+                    enc4 = this._keyStr.indexOf(input.charAt(i++));
+
+                    chr1 = (enc1 << 2) | (enc2 >> 4);
+                    chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+                    chr3 = ((enc3 & 3) << 6) | enc4;
+
+                    output = output + String.fromCharCode(chr1);
+
+                    if (enc3 != 64) {
+                        output = output + String.fromCharCode(chr2);
+                    }
+                    if (enc4 != 64) {
+                        output = output + String.fromCharCode(chr3);
+                    }
+                }
+
+                return output;
+            }
+        };
+    </script>
+</body>
+</html>
