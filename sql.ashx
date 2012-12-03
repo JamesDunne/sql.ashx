@@ -249,6 +249,14 @@ namespace AdHocQuery
             else
                 csb.IntegratedSecurity = true;
 
+            int cmdTimeout = 30;
+            int tmoutVal;
+            string tmout = req.QueryString["tmout"];
+            if ((tmout != null) && Int32.TryParse(tmout, out tmoutVal))
+                cmdTimeout = tmoutVal;
+
+            if (cmdTimeout <= 0) cmdTimeout = 30;
+
             using (var cn = new SqlConnection(csb.ToString()))
             using (var cmd = cn.CreateCommand())
             {
@@ -259,6 +267,7 @@ namespace AdHocQuery
 
                 cmd.CommandText = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\r\nSET ROWCOUNT {0};\r\n{1}".F(rowcount, query);
                 cmd.CommandType = CommandType.Text;
+                cmd.CommandTimeout = cmdTimeout;
 
                 // Connect to the SQL server:
                 try

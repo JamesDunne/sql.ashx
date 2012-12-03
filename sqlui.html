@@ -35,6 +35,9 @@
         input.sidebar {
             width: 240px;
         }
+        input.sidebar-half {
+            width: 110px;
+        }
         .tblResults {
             border-spacing: 0px;
         }
@@ -52,13 +55,10 @@
             <table border="0">
                 <tbody>
                     <tr>
-                        <td class="nowrap">Username:</td>
-                        <td><input id="uid" class="sidebar" type="text" value="" /></td>
+                        <td class="nowrap">Auth:</td>
+                        <td class="nowrap"><input id="auid" class="sidebar-half" type="text" value="username" />&nbsp;<input id="apwd" class="sidebar-half" type="password" value="password" /></td>
                     </tr>
-                    <tr>
-                        <td class="nowrap">Password:</td>
-                        <td><input id="pwd" class="sidebar" type="password" value="" /></td>
-                    </tr>
+                    <tr><td colspan="2">&nbsp;</td></tr>
                     <tr>
                         <td class="nowrap">Data Source:</td>
                         <td><input id="ds" class="sidebar" type="text" value="."/></td>
@@ -66,6 +66,23 @@
                     <tr>
                         <td class="nowrap">Initial Catalog:</td>
                         <td><input id="ic" class="sidebar" type="text" value="master"/></td>
+                    </tr>
+                    <tr>
+                        <td style="padding-top: 5px">&nbsp;</td>
+                        <td style="padding-top: 5px"><input id="intsec" type="checkbox" checked="checked" />&nbsp;<label for="intsec">Integrated Security</label></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">User ID:</td>
+                        <td><input id="uid" class="sidebar" type="text" value="" disabled="disabled" /></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Password:</td>
+                        <td><input id="pwd" class="sidebar" type="password" value="" disabled="disabled" /></td>
+                    </tr>
+                    <tr><td colspan="2">&nbsp;</td></tr>
+                    <tr>
+                        <td class="nowrap">Timeout:</td>
+                        <td><input id="timeout" class="sidebar" type="text" value="30"/></td>
                     </tr>
                     <tr>
                         <td class="nowrap">Row Count:</td>
@@ -81,10 +98,13 @@
         <td style="width: 100%">
             <div style="width: 100%">
                 <div style="float: right">
-                    <button type="button" id="btnExecute">Execute</button>
+                    <button type="button" id="btnExecute">Execute</button><br />
+                    <button type="button" id="btnCancel" disabled="disabled">Cancel</button><br /><br />
+                    <button type="button" id="btnLink">Update Link</button><br />
+                    <a id="selflink" href="#" style="display: none" title="Open query in new window" target="_blank">link</a>
                 </div>
-                <div style="">
-                    <textarea name="query" id="query" rows="18" cols="80">SELECT 1</textarea>
+                <div>
+                    <textarea name="query" id="query" rows="8" cols="80">SELECT 1</textarea>
                 </div>
             </div>
             <div style="clear: both; overflow-y: auto">
@@ -104,6 +124,8 @@
             if (document.readyState == "complete")
                 initApp();
         };
+
+        var queryXhr = null;
 
         function bindEvent(target, type, listener) {
             if (target.addEventListener)
@@ -129,7 +151,68 @@
             show('divErrors');
         }
 
+        function prepopulate() {
+            var ds = getParameterByName('ds');
+            var ic = getParameterByName('ic');
+            var q = getParameterByName('q');
+            var uid = getParameterByName('uid');
+            var pwd = getParameterByName('pwd');
+            var timeout = getParameterByName('timeout');
+            var rowcount = getParameterByName('rowcount');
+
+            if (ds !== null) v('ds', ds);
+            if (ic !== null) v('ic', ic);
+            if (q !== null) v('query', q);
+            if (uid !== null) {
+                v('uid', uid);
+                if (pwd !== null) v('pwd', pwd);
+
+                find('intsec').checked = false;
+                find('uid').disabled = false;
+                find('pwd').disabled = false;
+            }
+            if (timeout !== null) v('timeout', timeout);
+            if (rowcount !== null) v('rowcount', rowcount);
+        }
+
+        function genQueryString() {
+            var s = 'ds=' +
+                encodeURIComponent(v('ds')) +
+                '&ic=' + encodeURIComponent(v('ic')) +
+                '&timeout=' + encodeURIComponent(v('timeout')) +
+                '&rowcount=' + encodeURIComponent(v('rowcount')) +
+                (find('intsec').checked ? '' : (
+                    '&uid=' + encodeURIComponent(v('uid')) +
+                    '&pwd=' + encodeURIComponent(v('pwd'))
+                )) +
+                '&q=' + encodeURIComponent(v('query'));
+            return s;
+        }
+
         function initApp() {
+            // Parse the query string and pre-populate fields:
+            prepopulate();
+
+            // Update UI on "Integrated Security" checkbox change:
+            bindEvent(find('intsec'), 'change', function (e) {
+                var intsec = find('intsec').checked;
+                find('uid').disabled = intsec;
+                find('pwd').disabled = intsec;
+            });
+
+            // Cancel:
+            bindEvent(find('btnCancel'), 'click', function (e) {
+                if (queryXhr === null) return;
+                queryXhr.abort();
+            });
+
+            bindEvent(find('btnLink'), 'click', function (e) {
+                var url = window.location.pathname + '?' + genQueryString();
+                var selflink = find('selflink');
+                selflink.setAttribute('href', url);
+                show('selflink');
+            });
+
             // Execute:
             bindEvent(find('btnExecute'), 'click', function (e) {
                 // Get selected query text:
@@ -145,9 +228,11 @@
                 hide('divErrors');
 
                 // Execute query asynchronously:
-                runQuery({
+                queryXhr = runQuery({
                     query: query,
                     rowcount: v('rowcount'),
+                    before: function () { find('btnExecute').disabled = true; find('btnCancel').disabled = false; },
+                    after: function () { find('btnExecute').disabled = false; find('btnCancel').disabled = true; },
                     error: handleSqlAshxError,
                     success: function (rsp) {
                         var tables = find('tables');
@@ -195,7 +280,10 @@
                         var dbs = find('databases');
                         clearAllChildren(dbs);
                         for (var i = 0; i < rows.length; ++i) {
-                            dbs.appendChild(make('li')).innerText = rows[i][0];
+                            var li = make('li');
+                            li.innerText = rows[i][0];                  // [name]
+                            li.setAttribute('data-id', rows[i][1]);     // [database_id]
+                            dbs.appendChild(li);
                         }
                         show('databases');
                     }
@@ -205,28 +293,48 @@
         }
 
         function runQuery(opts) {
-            var uid = v('uid');
-            var pwd = v('pwd');
+            var auid = v('auid');
+            var apwd = v('apwd');
+
             var ds = v('ds');
             var ic = v('ic');
+            var intsec = find('intsec').checked;
+            var uid = v('uid');
+            var pwd = v('pwd');
+
             var rowcount = opts.rowcount || 0;
+            var tmout = opts.timeout || v('timeout') || 30;
+
             var query = opts.query;
             var error = opts.error;
             var success = opts.success;
+            var before = opts.before || function () { };
+            var after = opts.after || function () { };
+
+            var url = 'sql.ashx?ds=' + encodeURIComponent(ds) +
+                '&ic=' + encodeURIComponent(ic) +
+                (intsec ? '' : ('&uid=' + encodeURIComponent(uid) + '&pwd=' + encodeURIComponent(pwd))) +
+                '&tmout=' + encodeURIComponent(tmout) +
+                '&rowcount=' + encodeURIComponent(rowcount);
 
             var xhr = new XMLHttpRequest();
-            xhr.open('POST', 'sql.ashx?ds=' + encodeURIComponent(ds) + '&ic=' + encodeURIComponent(ic) + '&rowcount=' + encodeURIComponent(rowcount), true);
-            xhr.setRequestHeader('Authorization', 'Basic ' + Base64.encode(uid + ':' + pwd));
+            xhr.open('POST', url, true);
+            xhr.setRequestHeader('Authorization', 'Basic ' + Base64.encode(auid + ':' + apwd));
             xhr.onreadystatechange = function () {
                 if (this.readyState != 4) return;
-                var rsp = JSON.parse(this.responseText);
-                if (this.status != 200) {
-                    error(rsp);
-                } else {
-                    success(rsp);
-                }
+                try {
+                    var rsp = JSON.parse(this.responseText);
+                    if (this.status != 200) {
+                        error(rsp);
+                    } else {
+                        success(rsp);
+                    }
+                } catch (ex) { }
+                after();
             };
+            before();
             xhr.send(query);
+            return xhr;
         }
 
         function find(id) { return document.getElementById(id); }
@@ -239,11 +347,19 @@
         }
 
         function hide(id) { setProp(find(id).style, 'display', 'none'); }
-        function show(id) { setProp(find(id).style, 'display', 'block'); }
+        function show(id) {
+            var obj = find(id);
+            if (typeof obj === 'HTMLAnchorElement')
+                setProp(obj.style, 'display', 'inline');
+            else
+                setProp(obj.style, 'display', 'block');
+        }
 
-        function v(id) {
+        function v(id, setValue) {
             var el = find(id);
             if (el === null) return null;
+            if (setValue !== undefined)
+                el.value = setValue;
             return el.value;
         }
 
@@ -259,7 +375,7 @@
             var regex = new RegExp(regexS);
             var results = regex.exec(window.location.search);
             if (results == null)
-                return "";
+                return null;
             else
                 return decodeURIComponent(results[1].replace(/\+/g, " "));
         }
