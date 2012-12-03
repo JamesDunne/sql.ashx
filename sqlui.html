@@ -32,8 +32,8 @@
         textarea {
             font-family: 'Anonymous Pro', Consolas, 'Lucida Console', monospace;
         }
-        input.wide {
-            width: 400px;
+        input.sidebar {
+            width: 240px;
         }
         .tblResults {
             border-spacing: 0px;
@@ -53,23 +53,23 @@
                 <tbody>
                     <tr>
                         <td class="nowrap">Username:</td>
-                        <td><input id="uid" type="text" value="username" /></td>
+                        <td><input id="uid" class="sidebar" type="text" value="" /></td>
                     </tr>
                     <tr>
                         <td class="nowrap">Password:</td>
-                        <td><input id="pwd" type="password" value="password" /></td>
+                        <td><input id="pwd" class="sidebar" type="password" value="" /></td>
                     </tr>
                     <tr>
                         <td class="nowrap">Data Source:</td>
-                        <td><input id="ds" type="text" value="."/></td>
+                        <td><input id="ds" class="sidebar" type="text" value="."/></td>
                     </tr>
                     <tr>
                         <td class="nowrap">Initial Catalog:</td>
-                        <td><input id="ic" type="text" value="master"/></td>
+                        <td><input id="ic" class="sidebar" type="text" value="master"/></td>
                     </tr>
                     <tr>
                         <td class="nowrap">Row Count:</td>
-                        <td><input id="rowcount" type="text" value="100"/></td>
+                        <td><input id="rowcount" class="sidebar" type="text" value="100"/></td>
                     </tr>
                 </tbody>
             </table>
@@ -112,6 +112,23 @@
                 target.attachEvent('on' + type, listener);
         }
 
+        function handleSqlAshxError(rsp) {
+            var ul = find('ulErrors');
+            clearAllChildren(ul);
+            if (rsp.errors) {
+                // multiple errors:
+                for (var i = 0; i < rsp.errors.length; ++i) {
+                    // TODO: make clickable to select line in textarea!
+                    ul.appendChild(make('li')).innerText = rsp.errors[i].message;
+                }
+            } else {
+                // single error:
+                ul.appendChild(make('li')).innerText = rsp.error;
+            }
+
+            show('divErrors');
+        }
+
         function initApp() {
             // Execute:
             bindEvent(find('btnExecute'), 'click', function (e) {
@@ -130,22 +147,8 @@
                 // Execute query asynchronously:
                 runQuery({
                     query: query,
-                    error: function (rsp) {
-                        var ul = find('ulErrors');
-                        clearAllChildren(ul);
-                        if (rsp.errors) {
-                            // multiple errors:
-                            for (var i = 0; i < rsp.errors.length; ++i) {
-                                // TODO: make clickable to select line in textarea!
-                                ul.appendChild(make('li')).innerText = rsp.errors[i].message;
-                            }
-                        } else {
-                            // single error:
-                            ul.appendChild(make('li')).innerText = rsp.error;
-                        }
-
-                        show('divErrors');
-                    },
+                    rowcount: v('rowcount'),
+                    error: handleSqlAshxError,
                     success: function (rsp) {
                         var tables = find('tables');
                         clearAllChildren(tables);
@@ -185,9 +188,8 @@
             bindEvent(find('btnConnect'), 'click', function (e) {
                 hide('databases');
                 runQuery({
-                    query: "SELECT * FROM sys.databases",
-                    error: function (rsp) {
-                    },
+                    query: "SELECT [name],[database_id] FROM sys.databases ORDER BY [name] ASC",
+                    error: handleSqlAshxError,
                     success: function (rsp) {
                         var rows = rsp.results[0].rows;
                         var dbs = find('databases');
@@ -207,7 +209,7 @@
             var pwd = v('pwd');
             var ds = v('ds');
             var ic = v('ic');
-            var rowcount = opts.rowcount || v('rowcount');
+            var rowcount = opts.rowcount || 0;
             var query = opts.query;
             var error = opts.error;
             var success = opts.success;
@@ -249,6 +251,17 @@
             while (el.firstChild) {
                 el.removeChild(el.firstChild);
             }
+        }
+
+        function getParameterByName(name) {
+            name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+            var regexS = "[\\?&]" + name + "=([^&#]*)";
+            var regex = new RegExp(regexS);
+            var results = regex.exec(window.location.search);
+            if (results == null)
+                return "";
+            else
+                return decodeURIComponent(results[1].replace(/\+/g, " "));
         }
 
         var Base64 = {

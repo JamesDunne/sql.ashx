@@ -255,6 +255,7 @@ namespace AdHocQuery
                 long rowcount;
                 if (!Int64.TryParse(req.QueryString["rowcount"], out rowcount))
                     rowcount = 100;
+                if (rowcount < 0) rowcount = 0;
 
                 cmd.CommandText = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\r\nSET ROWCOUNT {0};\r\n{1}".F(rowcount, query);
                 cmd.CommandType = CommandType.Text;
