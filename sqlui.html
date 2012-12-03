@@ -4,54 +4,75 @@
 <head>
     <title>SQL Query</title>
     <style type="text/css">
-        body {
-            font-family: Segoe UI, Verdana, Tahoma;
-            font-size: small;
-        }
-        body, p, div, span, table, input, button, a, ol, h1, h2, h3, h4, h5, h6 {
-            border-spacing: 0px 0px;
-            padding: 0;
-            margin: 0;
-        }
-        ul, ol, li {
-            border-spacing: 0px 0px;
-            margin: 0;
-        }
-        ul, ol {
-            padding-left: 24px;
-        }
-        table td, table th {
-            padding: 0;
-            margin: 0;
-            text-align: left;
-            vertical-align: top;
-        }
-        input {
-            border: 1px solid gray;
-        }
-        textarea {
-            font-family: 'Anonymous Pro', Consolas, 'Lucida Console', monospace;
-        }
-        input.sidebar {
-            width: 240px;
-        }
-        input.sidebar-half {
-            width: 110px;
-        }
-        .tblResults {
-            border-spacing: 0px;
-        }
-        .tblResults > thead > tr > th {
-            white-space: nowrap;
-        }
-        .nowrap {
-            white-space: nowrap;
-        }
+body, p, div, span, table, input, button, a, ol, h1, h2, h3, h4, h5, h6 {
+    border-spacing: 0px 0px;
+    padding: 0;
+    margin: 0;
+}
+body {
+    font-family: Segoe UI, Verdana, Tahoma;
+    font-size: small;
+    margin-top: 4px !important;
+    margin-left: 4px !important;
+    margin-right: 16px !important;
+    margin-bottom: 16px !important;
+}
+ul, ol, li {
+    border-spacing: 0px 0px;
+    margin: 0;
+}
+ul, ol {
+    padding-left: 24px;
+}
+button {
+    padding: 2px 4px 2px 4px;
+}
+table td, table th {
+    padding: 0;
+    margin: 0;
+    text-align: left;
+    vertical-align: top;
+}
+input {
+    border: 1px solid gray;
+}
+textarea {
+    font-family: 'Anonymous Pro', Consolas, 'Courier New', 'Lucida Console', monospace;
+}
+input.sidebar {
+    width: 240px;
+}
+input.sidebar-half {
+    width: 110px;
+}
+.tblResults {
+    border-spacing: 0px;
+}
+.tblResults > thead > tr > th {
+    white-space: nowrap;
+}
+.nowrap {
+    white-space: nowrap;
+}
+td.rownum {
+    font-weight: bold;
+    text-align: right;
+    background-color: gray;
+}
+td.sepright {
+    border-right: 4px solid transparent;
+}
+td.septop {
+    border-top: 4px solid transparent;
+}
+td.sepbottom {
+    border-bottom: 4px solid transparent;
+}
     </style>
 </head>
 <body>
     <table border="0" style="width: 100%"><tbody><tr>
-        <td style="border-right: 1px solid">
+        <td class="sepright">
             <table border="0">
                 <tbody>
                     <tr>
@@ -88,363 +109,382 @@
                         <td class="nowrap">Row Count:</td>
                         <td><input id="rowcount" class="sidebar" type="text" value="100"/></td>
                     </tr>
+                    <tr>
+                        <td class="septop">
+                            <button id="btnConnect">Connect</button>
+                            <ul id="databases"></ul>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
-            <div style="border-top: 1px solid">
-                <button id="btnConnect">Connect</button>
-                <ul id="databases"></ul>
-            </div>
         </td>
-        <td style="width: 100%">
-            <div style="width: 100%">
-                <div style="float: right">
-                    <button type="button" id="btnExecute">Execute</button><br />
-                    <button type="button" id="btnCancel" disabled="disabled">Cancel</button><br /><br />
-                    <button type="button" id="btnLink">Update Link</button><br />
+        <td style="width: 100%"><table border="0" style="width: 100%"><tbody>
+            <tr id="trCmdBar">
+                <td style="height: 24px">
+                    <button type="button" id="btnExecute">Execute</button>&nbsp;
+                    <button type="button" id="btnCancel" disabled="disabled">Cancel</button>&nbsp;
+                    <button type="button" id="btnLink">Update Link</button>&nbsp;
                     <a id="selflink" href="#" style="display: none" title="Open query in new window" target="_blank">link</a>
-                </div>
-                <div>
-                    <textarea name="query" id="query" rows="8" cols="80">SELECT 1</textarea>
-                </div>
-            </div>
-            <div style="clear: both; overflow-y: auto">
-                <div id="divErrors" style="display: none; overflow-x: auto">
-                    <h3>Errors</h3>
-                    <ul id="ulErrors"></ul>
-                </div>
-                <div id="divResults" style="overflow-x: auto; width: 720px; height: 720px">
-                    <h3>Results</h3>
-                    <div id="tables"></div>
-                </div>
-            </div>
-        </td>
+                </td>
+            </tr>
+            <tr id="trQuery">
+                <td style="height: 160px">
+                    <textarea name="query" id="query" style="width: 100%; height: 100%; word-wrap: normal; overflow: auto" autofocus="autofocus" spellcheck="false">SELECT 1</textarea>
+                </td>
+            </tr>
+            <tr>
+                <td style="min-height: 24px">
+                    <div style="clear: both; overflow-y: auto">
+                        <div id="divErrors" style="display: none; overflow-x: auto">
+                            <h3>Errors</h3>
+                            <ul id="ulErrors"></ul>
+                        </div>
+                        <div>
+                            <h3>Results</h3>
+                            <div id="tables" style="overflow-x: auto"></div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </tbody></table></td>
     </tr></tbody></table>
-    <script type="text/javascript">
-        document.onreadystatechange = function () {
-            if (document.readyState == "complete")
-                initApp();
-        };
+<script type="text/javascript">
+'use strict';
 
-        var queryXhr = null;
+document.onreadystatechange = function () {
+    if (document.readyState == "complete")
+        initApp();
+};
 
-        function bindEvent(target, type, listener) {
-            if (target.addEventListener)
-                target.addEventListener(type, listener);
-            else
-                target.attachEvent('on' + type, listener);
+var queryXhr = null;
+
+function bindEvent(target, type, listener) {
+    if (target.addEventListener)
+        target.addEventListener(type, listener);
+    else
+        target.attachEvent('on' + type, listener);
+}
+
+function handleSqlAshxError(rsp) {
+    var ul = find('ulErrors');
+    clearAllChildren(ul);
+    if (rsp.errors) {
+        // multiple errors:
+        for (var i = 0; i < rsp.errors.length; ++i) {
+            // TODO: make clickable to select line in textarea!
+            ul.appendChild(make('li')).innerText = rsp.errors[i].message;
+        }
+    } else {
+        // single error:
+        ul.appendChild(make('li')).innerText = rsp.error;
+    }
+
+    show('divErrors');
+}
+
+function prepopulate() {
+    var ds = getParameterByName('ds');
+    var ic = getParameterByName('ic');
+    var q = getParameterByName('q');
+    var uid = getParameterByName('uid');
+    var pwd = getParameterByName('pwd');
+    var timeout = getParameterByName('timeout');
+    var rowcount = getParameterByName('rowcount');
+
+    if (ds !== null) v('ds', ds);
+    if (ic !== null) v('ic', ic);
+    if (q !== null) v('query', q);
+    if (uid !== null) {
+        v('uid', uid);
+        if (pwd !== null) v('pwd', pwd);
+
+        find('intsec').checked = false;
+        find('uid').disabled = false;
+        find('pwd').disabled = false;
+    }
+    if (timeout !== null) v('timeout', timeout);
+    if (rowcount !== null) v('rowcount', rowcount);
+}
+
+function genQueryString() {
+    var s = 'ds=' +
+        encodeURIComponent(v('ds')) +
+        '&ic=' + encodeURIComponent(v('ic')) +
+        '&timeout=' + encodeURIComponent(v('timeout')) +
+        '&rowcount=' + encodeURIComponent(v('rowcount')) +
+        (find('intsec').checked ? '' : (
+            '&uid=' + encodeURIComponent(v('uid')) +
+            '&pwd=' + encodeURIComponent(v('pwd'))
+        )) +
+        '&q=' + encodeURIComponent(v('query'));
+    return s;
+}
+
+function initApp() {
+    // Parse the query string and pre-populate fields:
+    prepopulate();
+
+    // Update UI on "Integrated Security" checkbox change:
+    bindEvent(find('intsec'), 'change', function (e) {
+        var intsec = find('intsec').checked;
+        find('uid').disabled = intsec;
+        find('pwd').disabled = intsec;
+    });
+
+    // Cancel:
+    bindEvent(find('btnCancel'), 'click', function (e) {
+        if (queryXhr === null) return;
+        queryXhr.abort();
+    });
+
+    bindEvent(find('btnLink'), 'click', function (e) {
+        var url = window.location.pathname + '?' + genQueryString();
+        var selflink = find('selflink');
+        selflink.setAttribute('href', url);
+        show('selflink');
+    });
+
+    // Execute:
+    bindEvent(find('btnExecute'), 'click', function (e) {
+        // Get selected query text:
+        var qtextarea = find('query');
+        var selstart = qtextarea.selectionStart;
+        var selend = qtextarea.selectionEnd;
+        var query = qtextarea.value;
+        if (selend > selstart) {
+            query = query.substring(selstart, selend);
         }
 
-        function handleSqlAshxError(rsp) {
-            var ul = find('ulErrors');
-            clearAllChildren(ul);
-            if (rsp.errors) {
-                // multiple errors:
-                for (var i = 0; i < rsp.errors.length; ++i) {
-                    // TODO: make clickable to select line in textarea!
-                    ul.appendChild(make('li')).innerText = rsp.errors[i].message;
+        hide('tables');
+        hide('divErrors');
+
+        // Execute query asynchronously:
+        queryXhr = runQuery({
+            query: query,
+            rowcount: v('rowcount'),
+            before: function () { find('btnExecute').disabled = true; find('btnCancel').disabled = false; },
+            after: function () { find('btnExecute').disabled = false; find('btnCancel').disabled = true; },
+            error: handleSqlAshxError,
+            success: function (rsp) {
+                var tables = find('tables');
+                clearAllChildren(tables);
+
+                // Enumerate all results and create tables for them:
+                for (var n = 0; n < rsp.results.length; ++n) {
+                    var resultset = rsp.results[n];
+
+                    var tbl = tables.appendChild(make('table'));
+                    tbl.classList.add('tblResults');
+                    tbl.setAttribute('border', '1');
+                    setProp(tbl.style, 'width', find('query').clientWidth + ' px');
+
+                    var thead = tbl.appendChild(make('thead'));
+                    var tbody = tbl.appendChild(make('tbody'));
+
+                    var headrow = thead.appendChild(make('tr'));
+                    headrow.appendChild(make('td')).innerText = '#';
+                    for (var i = 0; i < resultset.columns.length; ++i)
+                        headrow.appendChild(make('th')).innerText = resultset.columns[i];
+
+                    for (var r = 0; r < resultset.rows.length; ++r) {
+                        var tr = tbody.appendChild(make('tr'));
+                        var row = resultset.rows[r];
+                        var rownum = tr.appendChild(make('td'));
+                        rownum.innerText = '' + (r + 1);
+                        rownum.classList.add('rownum');
+                        for (var c = 0; c < row.length; ++c) {
+                            var td = tr.appendChild(make('td'));
+                            td.innerText = '' + row[c];
+                        }
+                    }
                 }
+
+                setProp(tables.style, 'width', '' + find('query').clientWidth + 'px');
+                var newHeight = (window.innerHeight - 48 - find('trCmdBar').clientHeight - find('trQuery').clientHeight);
+                setProp(tables.style, 'height', '' + newHeight + 'px');
+                show('tables');
+            }
+        });
+
+        return false;
+    });
+
+    // Connect:
+    bindEvent(find('btnConnect'), 'click', function (e) {
+        hide('databases');
+        runQuery({
+            query: "SELECT [name],[database_id] FROM sys.databases ORDER BY [name] ASC",
+            error: handleSqlAshxError,
+            success: function (rsp) {
+                var rows = rsp.results[0].rows;
+                var dbs = find('databases');
+                clearAllChildren(dbs);
+                for (var i = 0; i < rows.length; ++i) {
+                    var li = make('li');
+                    li.innerText = rows[i][0];                  // [name]
+                    li.setAttribute('data-id', rows[i][1]);     // [database_id]
+                    dbs.appendChild(li);
+                }
+                show('databases');
+            }
+        });
+        return false;
+    });
+}
+
+function runQuery(opts) {
+    var auid = v('auid');
+    var apwd = v('apwd');
+
+    var ds = v('ds');
+    var ic = v('ic');
+    var intsec = find('intsec').checked;
+    var uid = v('uid');
+    var pwd = v('pwd');
+
+    var rowcount = opts.rowcount || 0;
+    var tmout = opts.timeout || v('timeout') || 30;
+
+    var query = opts.query;
+    var error = opts.error;
+    var success = opts.success;
+    var before = opts.before || function () { };
+    var after = opts.after || function () { };
+
+    var url = 'sql.ashx?ds=' + encodeURIComponent(ds) +
+        '&ic=' + encodeURIComponent(ic) +
+        (intsec ? '' : ('&uid=' + encodeURIComponent(uid) + '&pwd=' + encodeURIComponent(pwd))) +
+        '&tmout=' + encodeURIComponent(tmout) +
+        '&rowcount=' + encodeURIComponent(rowcount);
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Authorization', 'Basic ' + Base64.encode(auid + ':' + apwd));
+    xhr.onreadystatechange = function () {
+        if (this.readyState != 4) return;
+        try {
+            var rsp = JSON.parse(this.responseText);
+            if (this.status != 200) {
+                error(rsp);
             } else {
-                // single error:
-                ul.appendChild(make('li')).innerText = rsp.error;
+                success(rsp);
+            }
+        } catch (ex) { }
+        after();
+    };
+    before();
+    xhr.send(query);
+    return xhr;
+}
+
+function find(id) { return document.getElementById(id); }
+function make(tag) { return document.createElement(tag); }
+function setProp(style, prop, value) {
+    if (style.setProperty)
+        style.setProperty(prop, value);
+    else
+        style.setAttribute(prop, value);
+}
+
+function hide(id) { setProp(find(id).style, 'display', 'none'); }
+function show(id) {
+    var obj = find(id);
+    if (obj.tagName && obj.tagName === 'A')
+        setProp(obj.style, 'display', 'inline');
+    else
+        setProp(obj.style, 'display', 'block');
+}
+
+function v(id, setValue) {
+    var el = find(id);
+    if (el === null) return null;
+    if (setValue !== undefined)
+        el.value = setValue;
+    return el.value;
+}
+
+function clearAllChildren(el) {
+    while (el.firstChild) {
+        el.removeChild(el.firstChild);
+    }
+}
+
+function getParameterByName(name) {
+    name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+    var regexS = "[\\?&]" + name + "=([^&#]*)";
+    var regex = new RegExp(regexS);
+    var results = regex.exec(window.location.search);
+    if (results == null)
+        return null;
+    else
+        return decodeURIComponent(results[1].replace(/\+/g, " "));
+}
+
+var Base64 = {
+    // private property
+    _keyStr: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
+
+    // public method for encoding
+    encode: function (input) {
+        var output = "";
+        var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+        var i = 0;
+
+        while (i < input.length) {
+            chr1 = input.charCodeAt(i++);
+            chr2 = input.charCodeAt(i++);
+            chr3 = input.charCodeAt(i++);
+
+            enc1 = chr1 >> 2;
+            enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+            enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+            enc4 = chr3 & 63;
+
+            if (isNaN(chr2)) {
+                enc3 = enc4 = 64;
+            } else if (isNaN(chr3)) {
+                enc4 = 64;
             }
 
-            show('divErrors');
+            output = output +
+                this._keyStr.charAt(enc1) + this._keyStr.charAt(enc2) +
+                this._keyStr.charAt(enc3) + this._keyStr.charAt(enc4);
         }
 
-        function prepopulate() {
-            var ds = getParameterByName('ds');
-            var ic = getParameterByName('ic');
-            var q = getParameterByName('q');
-            var uid = getParameterByName('uid');
-            var pwd = getParameterByName('pwd');
-            var timeout = getParameterByName('timeout');
-            var rowcount = getParameterByName('rowcount');
+        return output;
+    },
+    // public method for decoding
+    decode: function (input) {
+        var output = "";
+        var chr1, chr2, chr3;
+        var enc1, enc2, enc3, enc4;
+        var i = 0;
 
-            if (ds !== null) v('ds', ds);
-            if (ic !== null) v('ic', ic);
-            if (q !== null) v('query', q);
-            if (uid !== null) {
-                v('uid', uid);
-                if (pwd !== null) v('pwd', pwd);
+        input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
 
-                find('intsec').checked = false;
-                find('uid').disabled = false;
-                find('pwd').disabled = false;
+        while (i < input.length) {
+            enc1 = this._keyStr.indexOf(input.charAt(i++));
+            enc2 = this._keyStr.indexOf(input.charAt(i++));
+            enc3 = this._keyStr.indexOf(input.charAt(i++));
+            enc4 = this._keyStr.indexOf(input.charAt(i++));
+
+            chr1 = (enc1 << 2) | (enc2 >> 4);
+            chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+            chr3 = ((enc3 & 3) << 6) | enc4;
+
+            output = output + String.fromCharCode(chr1);
+
+            if (enc3 != 64) {
+                output = output + String.fromCharCode(chr2);
             }
-            if (timeout !== null) v('timeout', timeout);
-            if (rowcount !== null) v('rowcount', rowcount);
-        }
-
-        function genQueryString() {
-            var s = 'ds=' +
-                encodeURIComponent(v('ds')) +
-                '&ic=' + encodeURIComponent(v('ic')) +
-                '&timeout=' + encodeURIComponent(v('timeout')) +
-                '&rowcount=' + encodeURIComponent(v('rowcount')) +
-                (find('intsec').checked ? '' : (
-                    '&uid=' + encodeURIComponent(v('uid')) +
-                    '&pwd=' + encodeURIComponent(v('pwd'))
-                )) +
-                '&q=' + encodeURIComponent(v('query'));
-            return s;
-        }
-
-        function initApp() {
-            // Parse the query string and pre-populate fields:
-            prepopulate();
-
-            // Update UI on "Integrated Security" checkbox change:
-            bindEvent(find('intsec'), 'change', function (e) {
-                var intsec = find('intsec').checked;
-                find('uid').disabled = intsec;
-                find('pwd').disabled = intsec;
-            });
-
-            // Cancel:
-            bindEvent(find('btnCancel'), 'click', function (e) {
-                if (queryXhr === null) return;
-                queryXhr.abort();
-            });
-
-            bindEvent(find('btnLink'), 'click', function (e) {
-                var url = window.location.pathname + '?' + genQueryString();
-                var selflink = find('selflink');
-                selflink.setAttribute('href', url);
-                show('selflink');
-            });
-
-            // Execute:
-            bindEvent(find('btnExecute'), 'click', function (e) {
-                // Get selected query text:
-                var qtextarea = find('query');
-                var selstart = qtextarea.selectionStart;
-                var selend = qtextarea.selectionEnd;
-                var query = qtextarea.value;
-                if (selend > selstart) {
-                    query = query.substring(selstart, selend);
-                }
-
-                hide('tables');
-                hide('divErrors');
-
-                // Execute query asynchronously:
-                queryXhr = runQuery({
-                    query: query,
-                    rowcount: v('rowcount'),
-                    before: function () { find('btnExecute').disabled = true; find('btnCancel').disabled = false; },
-                    after: function () { find('btnExecute').disabled = false; find('btnCancel').disabled = true; },
-                    error: handleSqlAshxError,
-                    success: function (rsp) {
-                        var tables = find('tables');
-                        clearAllChildren(tables);
-
-                        // Enumerate all results and create tables for them:
-                        for (var n = 0; n < rsp.results.length; ++n) {
-                            var resultset = rsp.results[n];
-
-                            var tbl = tables.appendChild(make('table'));
-                            tbl.classList.add('tblResults');
-                            tbl.setAttribute('border', '1');
-
-                            var thead = tbl.appendChild(make('thead'));
-                            var tbody = tbl.appendChild(make('tbody'));
-
-                            var headrow = thead.appendChild(make('tr'));
-                            for (var i = 0; i < resultset.columns.length; ++i)
-                                headrow.appendChild(make('th')).innerText = resultset.columns[i];
-
-                            for (var r = 0; r < resultset.rows.length; ++r) {
-                                var tr = tbody.appendChild(make('tr'));
-                                var row = resultset.rows[r];
-                                for (var c = 0; c < row.length; ++c) {
-                                    var td = tr.appendChild(make('td'));
-                                    td.innerText = '' + row[c];
-                                }
-                            }
-                        }
-                        show('tables');
-                    }
-                });
-
-                return false;
-            });
-
-            // Connect:
-            bindEvent(find('btnConnect'), 'click', function (e) {
-                hide('databases');
-                runQuery({
-                    query: "SELECT [name],[database_id] FROM sys.databases ORDER BY [name] ASC",
-                    error: handleSqlAshxError,
-                    success: function (rsp) {
-                        var rows = rsp.results[0].rows;
-                        var dbs = find('databases');
-                        clearAllChildren(dbs);
-                        for (var i = 0; i < rows.length; ++i) {
-                            var li = make('li');
-                            li.innerText = rows[i][0];                  // [name]
-                            li.setAttribute('data-id', rows[i][1]);     // [database_id]
-                            dbs.appendChild(li);
-                        }
-                        show('databases');
-                    }
-                });
-                return false;
-            });
-        }
-
-        function runQuery(opts) {
-            var auid = v('auid');
-            var apwd = v('apwd');
-
-            var ds = v('ds');
-            var ic = v('ic');
-            var intsec = find('intsec').checked;
-            var uid = v('uid');
-            var pwd = v('pwd');
-
-            var rowcount = opts.rowcount || 0;
-            var tmout = opts.timeout || v('timeout') || 30;
-
-            var query = opts.query;
-            var error = opts.error;
-            var success = opts.success;
-            var before = opts.before || function () { };
-            var after = opts.after || function () { };
-
-            var url = 'sql.ashx?ds=' + encodeURIComponent(ds) +
-                '&ic=' + encodeURIComponent(ic) +
-                (intsec ? '' : ('&uid=' + encodeURIComponent(uid) + '&pwd=' + encodeURIComponent(pwd))) +
-                '&tmout=' + encodeURIComponent(tmout) +
-                '&rowcount=' + encodeURIComponent(rowcount);
-
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', url, true);
-            xhr.setRequestHeader('Authorization', 'Basic ' + Base64.encode(auid + ':' + apwd));
-            xhr.onreadystatechange = function () {
-                if (this.readyState != 4) return;
-                try {
-                    var rsp = JSON.parse(this.responseText);
-                    if (this.status != 200) {
-                        error(rsp);
-                    } else {
-                        success(rsp);
-                    }
-                } catch (ex) { }
-                after();
-            };
-            before();
-            xhr.send(query);
-            return xhr;
-        }
-
-        function find(id) { return document.getElementById(id); }
-        function make(tag) { return document.createElement(tag); }
-        function setProp(style, prop, value) {
-            if (style.setProperty)
-                style.setProperty(prop, value);
-            else
-                style.setAttribute(prop, value);
-        }
-
-        function hide(id) { setProp(find(id).style, 'display', 'none'); }
-        function show(id) {
-            var obj = find(id);
-            if (typeof obj === 'HTMLAnchorElement')
-                setProp(obj.style, 'display', 'inline');
-            else
-                setProp(obj.style, 'display', 'block');
-        }
-
-        function v(id, setValue) {
-            var el = find(id);
-            if (el === null) return null;
-            if (setValue !== undefined)
-                el.value = setValue;
-            return el.value;
-        }
-
-        function clearAllChildren(el) {
-            while (el.firstChild) {
-                el.removeChild(el.firstChild);
+            if (enc4 != 64) {
+                output = output + String.fromCharCode(chr3);
             }
         }
 
-        function getParameterByName(name) {
-            name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
-            var regexS = "[\\?&]" + name + "=([^&#]*)";
-            var regex = new RegExp(regexS);
-            var results = regex.exec(window.location.search);
-            if (results == null)
-                return null;
-            else
-                return decodeURIComponent(results[1].replace(/\+/g, " "));
-        }
-
-        var Base64 = {
-            // private property
-            _keyStr: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
-
-            // public method for encoding
-            encode: function (input) {
-                var output = "";
-                var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
-                var i = 0;
-
-                while (i < input.length) {
-                    chr1 = input.charCodeAt(i++);
-                    chr2 = input.charCodeAt(i++);
-                    chr3 = input.charCodeAt(i++);
-
-                    enc1 = chr1 >> 2;
-                    enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
-                    enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
-                    enc4 = chr3 & 63;
-
-                    if (isNaN(chr2)) {
-                        enc3 = enc4 = 64;
-                    } else if (isNaN(chr3)) {
-                        enc4 = 64;
-                    }
-
-                    output = output +
-                        this._keyStr.charAt(enc1) + this._keyStr.charAt(enc2) +
-                        this._keyStr.charAt(enc3) + this._keyStr.charAt(enc4);
-                }
-
-                return output;
-            },
-            // public method for decoding
-            decode: function (input) {
-                var output = "";
-                var chr1, chr2, chr3;
-                var enc1, enc2, enc3, enc4;
-                var i = 0;
-
-                input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
-
-                while (i < input.length) {
-                    enc1 = this._keyStr.indexOf(input.charAt(i++));
-                    enc2 = this._keyStr.indexOf(input.charAt(i++));
-                    enc3 = this._keyStr.indexOf(input.charAt(i++));
-                    enc4 = this._keyStr.indexOf(input.charAt(i++));
-
-                    chr1 = (enc1 << 2) | (enc2 >> 4);
-                    chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
-                    chr3 = ((enc3 & 3) << 6) | enc4;
-
-                    output = output + String.fromCharCode(chr1);
-
-                    if (enc3 != 64) {
-                        output = output + String.fromCharCode(chr2);
-                    }
-                    if (enc4 != 64) {
-                        output = output + String.fromCharCode(chr3);
-                    }
-                }
-
-                return output;
-            }
-        };
-    </script>
+        return output;
+    }
+};
+</script>
 </body>
 </html>
