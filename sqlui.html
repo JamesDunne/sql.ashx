@@ -186,7 +186,7 @@ td.septop {
                     </tr>
                     <tr>
                         <td class="nowrap">Timeout:</td>
-                        <td><input id="timeout" class="sidebar" type="text" value="30" placeholder="timeout (secs)" title="Number of seconds to wait for command execution" /></td>
+                        <td><input id="timeout" class="sidebar" type="number" value="30" min="0" max="900" step="10" style="width: 64px; text-align: right" title="Number of seconds to wait for command execution" /></td>
                     </tr>
                     <tr><td colspan="2">&nbsp;</td></tr>
                     <tr>
@@ -690,7 +690,7 @@ function show(id) {
     if (obj.tagName) {
         if (obj.tagName === 'A')
             disp = 'inline';
-        else if (obj.tagName == 'TD')
+        else if (obj.tagName === 'TD')
             disp = 'table-cell';
     }
 
@@ -698,7 +698,7 @@ function show(id) {
 }
 function toggle(id) {
     var obj = find(id);
-    if (obj.style.display == 'none') {
+    if (obj.style.display === 'none') {
         show(id);
         return true;
     } else {
