@@ -97,7 +97,7 @@ td.sepbottom {
 </head>
 <body>
     <table border="0" style="width: 100%"><tbody><tr>
-        <td class="sepright">
+        <td id="sidebar" class="sepright">
             <table border="0">
                 <tbody>
                     <tr>
@@ -316,8 +316,9 @@ function getSelectedQueryText() {
 
 function resizeResults() {
     var tables = find('tables');
-    setProp(tables.style, 'width', '' + find('query').clientWidth + 'px');
-    var newHeight = window.innerHeight - (find('trResults').clientHeight - tables.clientHeight + 8) - find('trCmdBar').clientHeight - find('trQuery').clientHeight;
+    var newWidth = window.innerWidth - 16 - find('sidebar').offsetWidth;
+    setProp(tables.style, 'width', '' + newWidth + 'px');
+    var newHeight = window.innerHeight - 12 - (find('trResults').offsetHeight - tables.offsetHeight) - find('trCmdBar').offsetHeight - find('trQuery').offsetHeight;
     setProp(tables.style, 'height', '' + newHeight + 'px');
 }
 
