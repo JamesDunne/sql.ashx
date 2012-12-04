@@ -13,8 +13,8 @@ body, p, div, span, table, input, button, textarea, pre, a, ol, h1, h2, h3, h4, 
 body {
     font-family: Segoe UI, Verdana, Tahoma;
     font-size: small;
-    margin-top: 4px !important;
-    margin-left: 4px !important;
+    margin-top: 8px !important;
+    margin-left: 8px !important;
     margin-right: 12px !important;
     margin-bottom: 12px !important;
     height: 100%;
@@ -71,7 +71,7 @@ input.sidebar {
     width: 240px;
 }
 input.sidebar-half {
-    width: 110px;
+    width: 100px;
 }
 .tblResults {
     border-spacing: 0px;
@@ -102,13 +102,10 @@ td.rownum {
     padding-left: 2px;
 }
 td.sepright {
-    border-right: 4px solid transparent;
+    border-right: 8px solid transparent;
 }
 td.septop {
-    border-top: 4px solid transparent;
-}
-td.sepbottom {
-    border-bottom: 4px solid transparent;
+    border-top: 8px solid transparent;
 }
 /* NOTE(jsd): More web FAIL. No way for FF to set custom scrollbar. */
 #tables::-webkit-scrollbar {
@@ -131,12 +128,19 @@ td.sepbottom {
 </head>
 <body>
     <table border="0" style="width: 100%"><tbody><tr>
-        <td id="sidebar" class="sepright">
-            <table border="0">
+        <td class="sepright">
+            <div id="divBtnSidebar" style="position: absolute; left: 312px">
+                <button type="button" id="btnSidebar" title="Hide sidebar">&lt;</button>
+            </div>
+            <div id="sidebarPlaceholder" style="display: none; width: 16px; height: 100%"></div>
+            <table id="sidebar" border="0">
                 <tbody>
                     <tr>
                         <td class="nowrap">Auth:</td>
-                        <td class="nowrap"><input id="auid" class="sidebar-half" type="text" value="username" />&nbsp;<input id="apwd" class="sidebar-half" type="password" value="password" /></td>
+                        <td class="nowrap"><div>
+                            <input id="auid" class="sidebar-half" type="text" value="username" />&nbsp;
+                            <input id="apwd" class="sidebar-half" type="password" value="password" />
+                        </div></td>
                     </tr>
                     <tr><td colspan="2">&nbsp;</td></tr>
                     <tr>
@@ -233,6 +237,24 @@ function initApp() {
     // NOTE(jsd): Web FAIL. No resize events for textarea in Chrome or FF17.
     //bindEvent(find('query'), 'resize', function (e) { console.log(e); resizeResults(); });
 
+    bindEvent(find('btnSidebar'), 'click', function (e) {
+        if (toggle('sidebar')) {
+            hide('sidebarPlaceholder');
+            setProp(find('divBtnSidebar').style, 'left', '312px');
+            var btn = find('btnSidebar');
+            btn.setAttribute('title', 'Hide sidebar');
+            setTextContent(btn, '<');
+        } else {
+            setProp(find('divBtnSidebar').style, 'left', '8px');
+            var btn = find('btnSidebar');
+            btn.setAttribute('title', 'Show sidebar');
+            setTextContent(btn, '>');
+            show('sidebarPlaceholder');
+        }
+        // Resize the result grid:
+        resizeResults();
+    });
+
     // Update UI on "Integrated Security" checkbox change:
     bindEvent(find('intsec'), 'change', function (e) {
         var intsec = find('intsec').checked;
@@ -311,7 +333,7 @@ function initApp() {
                 clearAllChildren(dbs);
                 for (var i = 0; i < rows.length; ++i) {
                     var li = make('li');
-                    setTextContent(li, rows[i][0]);                  // [name]
+                    setTextContent(li, rows[i][0]);             // [name]
                     li.setAttribute('data-id', rows[i][1]);     // [database_id]
                     dbs.appendChild(li);
                 }
@@ -536,9 +558,9 @@ function getSelectedQueryText() {
 
 function resizeResults() {
     var tables = find('tables');
-    var newWidth = window.innerWidth - 16 - find('sidebar').offsetWidth;
+    var newWidth = window.innerWidth - 24 - find('sidebar').offsetWidth - find('sidebarPlaceholder').offsetWidth;
     setProp(tables.style, 'width', '' + newWidth + 'px');
-    var newHeight = window.innerHeight - 12 - (find('trResults').offsetHeight - tables.offsetHeight) - find('trCmdBar').offsetHeight - find('trQuery').offsetHeight;
+    var newHeight = window.innerHeight - 16 - (find('trResults').offsetHeight - tables.offsetHeight) - find('trCmdBar').offsetHeight - find('trQuery').offsetHeight;
     setProp(tables.style, 'height', '' + newHeight + 'px');
 }
 
@@ -599,10 +621,26 @@ function setProp(style, prop, value) {
 function hide(id) { setProp(find(id).style, 'display', 'none'); }
 function show(id) {
     var obj = find(id);
-    if (obj.tagName && obj.tagName === 'A')
-        setProp(obj.style, 'display', 'inline');
-    else
-        setProp(obj.style, 'display', 'block');
+
+    var disp = 'block';
+    if (obj.tagName) {
+        if (obj.tagName === 'A')
+            disp = 'inline';
+        else if (obj.tagName == 'TD')
+            disp = 'table-cell';
+    }
+
+    setProp(obj.style, 'display', disp);
+}
+function toggle(id) {
+    var obj = find(id);
+    if (obj.style.display == 'none') {
+        show(id);
+        return true;
+    } else {
+        hide(id);
+        return false;
+    }
 }
 
 function v(id, setValue) {
