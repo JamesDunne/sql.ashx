@@ -4,10 +4,11 @@
 <head>
     <title>SQL Query</title>
     <style type="text/css">
-body, p, div, span, table, input, button, a, ol, h1, h2, h3, h4, h5, h6 {
+body, p, div, span, table, input, button, textarea, a, ol, h1, h2, h3, h4, h5, h6 {
     border-spacing: 0px 0px;
     padding: 0;
     margin: 0;
+    color: #999999;
 }
 body {
     font-family: Segoe UI, Verdana, Tahoma;
@@ -16,6 +17,9 @@ body {
     margin-left: 4px !important;
     margin-right: 16px !important;
     margin-bottom: 16px !important;
+    height: 100%;
+    overflow: hidden;
+    background-color: #151515 !important;
 }
 ul, ol, li {
     border-spacing: 0px 0px;
@@ -26,6 +30,17 @@ ul, ol {
 }
 button {
     padding: 2px 4px 2px 4px;
+    border-radius: 3px 3px;
+    border-style: double;
+    border-color: #1a1a1a;
+    background-color: #1f1f1f;
+    text-shadow: black 0.1em 0.1em 0.2em
+}
+button:disabled {
+    border-color: #2a2a2a;
+    background-color: #303030;
+    color: #aaa;
+    text-shadow: #666 0.1em 0.1em 0.2em
 }
 table td, table th {
     padding: 0;
@@ -35,9 +50,11 @@ table td, table th {
 }
 input {
     border: 1px solid gray;
+    background-color: #1f1f1f;
 }
 textarea {
     font-family: 'Anonymous Pro', Consolas, 'Courier New', 'Lucida Console', monospace;
+    background-color: #121212;
 }
 input.sidebar {
     width: 240px;
@@ -50,6 +67,8 @@ input.sidebar-half {
 }
 .tblResults > thead > tr > th {
     white-space: nowrap;
+    background-color: #101010;
+    color: #777;
 }
 .nowrap {
     white-space: nowrap;
@@ -57,7 +76,9 @@ input.sidebar-half {
 td.rownum {
     font-weight: bold;
     text-align: right;
-    background-color: gray;
+    background-color: #101010 !important;
+    padding-right: 2px;
+    padding-left: 2px;
 }
 td.sepright {
     border-right: 4px solid transparent;
@@ -110,9 +131,11 @@ td.sepbottom {
                         <td><input id="rowcount" class="sidebar" type="text" value="100"/></td>
                     </tr>
                     <tr>
-                        <td class="septop">
+                        <td colspan="2" class="septop">
                             <button id="btnConnect">Connect</button>
-                            <ul id="databases"></ul>
+                            <div id="explorer" style="width: 100%; overflow-x: auto; overflow-y: auto">
+                                <ul id="databases"></ul>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
@@ -120,7 +143,7 @@ td.sepbottom {
         </td>
         <td style="width: 100%"><table border="0" style="width: 100%"><tbody>
             <tr id="trCmdBar">
-                <td style="height: 24px">
+                <td style="height: 28px">
                     <button type="button" id="btnExecute">Execute</button>&nbsp;
                     <button type="button" id="btnCancel" disabled="disabled">Cancel</button>&nbsp;
                     <button type="button" id="btnLink">Update Link</button>&nbsp;
@@ -182,6 +205,50 @@ function handleSqlAshxError(rsp) {
     show('divErrors');
 }
 
+function showQueryResults(rsp) {
+    var tables = find('tables');
+    clearAllChildren(tables);
+
+    // Enumerate all results and create tables for them:
+    for (var n = 0; n < rsp.results.length; ++n) {
+        var resultset = rsp.results[n];
+
+        var tbl = tables.appendChild(make('table'));
+        tbl.classList.add('tblResults');
+        tbl.setAttribute('border', '1');
+        setProp(tbl.style, 'width', find('query').clientWidth + ' px');
+
+        var thead = tbl.appendChild(make('thead'));
+        var tbody = tbl.appendChild(make('tbody'));
+
+        // Make the head row:
+        var headrow = thead.appendChild(make('tr'));
+        var thnum = headrow.appendChild(make('th'));
+        thnum.innerText = '#';
+        setProp(thnum.style, 'textAlign', 'right');
+        for (var i = 0; i < resultset.columns.length; ++i)
+            headrow.appendChild(make('th')).innerText = resultset.columns[i];
+
+        // Make the data rows:
+        for (var r = 0; r < resultset.rows.length; ++r) {
+            var tr = tbody.appendChild(make('tr'));
+            var row = resultset.rows[r];
+            var rownum = tr.appendChild(make('td'));
+            rownum.innerText = '' + (r + 1);
+            rownum.classList.add('rownum');
+            for (var c = 0; c < row.length; ++c) {
+                var td = tr.appendChild(make('td'));
+                td.innerText = '' + row[c];
+            }
+        }
+    }
+
+    setProp(tables.style, 'width', '' + find('query').clientWidth + 'px');
+    var newHeight = (window.innerHeight - 48 - find('trCmdBar').clientHeight - find('trQuery').clientHeight);
+    setProp(tables.style, 'height', '' + newHeight + 'px');
+    show('tables');
+}
+
 function prepopulate() {
     var ds = getParameterByName('ds');
     var ic = getParameterByName('ic');
@@ -220,6 +287,18 @@ function genQueryString() {
     return s;
 }
 
+function getSelectedQueryText() {
+    // Get selected query text:
+    var qtextarea = find('query');
+    var selstart = qtextarea.selectionStart;
+    var selend = qtextarea.selectionEnd;
+    var query = qtextarea.value;
+    if (selend > selstart) {
+        query = query.substring(selstart, selend);
+    }
+    return query;
+}
+
 function initApp() {
     // Parse the query string and pre-populate fields:
     prepopulate();
@@ -237,6 +316,7 @@ function initApp() {
         queryXhr.abort();
     });
 
+    // Update link:
     bindEvent(find('btnLink'), 'click', function (e) {
         var url = window.location.pathname + '?' + genQueryString();
         var selflink = find('selflink');
@@ -244,69 +324,34 @@ function initApp() {
         show('selflink');
     });
 
-    // Execute:
-    bindEvent(find('btnExecute'), 'click', function (e) {
-        // Get selected query text:
-        var qtextarea = find('query');
-        var selstart = qtextarea.selectionStart;
-        var selend = qtextarea.selectionEnd;
-        var query = qtextarea.value;
-        if (selend > selstart) {
-            query = query.substring(selstart, selend);
+    // textarea keyboard shortcuts:
+    bindEvent(find('query'), 'keyup', function (e) {
+        if (!e.ctrlKey) return false;
+
+        var highlighted = getSelectedQueryText();
+        var query = null;
+        var rowcount = 0;
+
+        if (e.keyCode == '5'.charCodeAt(0)) {
+            // CTRL-5: sp_helptext;
+            query = 'exec sp_helptext \'' + highlighted.replace('\'', '\'\'') + '\'';
+        } else if (e.keyCode == '0'.charCodeAt(0)) {
+            // CTRL-0: SELECT * FROM;
+            query = 'SELECT * FROM ' + highlighted;
+            rowcount = v('rowcount');
         }
 
-        hide('tables');
-        hide('divErrors');
+        if (query === null) return false;
 
-        // Execute query asynchronously:
         queryXhr = runQuery({
             query: query,
-            rowcount: v('rowcount'),
+            rowcount: rowcount,
             before: function () { find('btnExecute').disabled = true; find('btnCancel').disabled = false; },
-            after: function () { find('btnExecute').disabled = false; find('btnCancel').disabled = true; },
+            after: function () { queryXhr = null; find('btnExecute').disabled = false; find('btnCancel').disabled = true; },
             error: handleSqlAshxError,
-            success: function (rsp) {
-                var tables = find('tables');
-                clearAllChildren(tables);
-
-                // Enumerate all results and create tables for them:
-                for (var n = 0; n < rsp.results.length; ++n) {
-                    var resultset = rsp.results[n];
-
-                    var tbl = tables.appendChild(make('table'));
-                    tbl.classList.add('tblResults');
-                    tbl.setAttribute('border', '1');
-                    setProp(tbl.style, 'width', find('query').clientWidth + ' px');
-
-                    var thead = tbl.appendChild(make('thead'));
-                    var tbody = tbl.appendChild(make('tbody'));
-
-                    var headrow = thead.appendChild(make('tr'));
-                    headrow.appendChild(make('td')).innerText = '#';
-                    for (var i = 0; i < resultset.columns.length; ++i)
-                        headrow.appendChild(make('th')).innerText = resultset.columns[i];
-
-                    for (var r = 0; r < resultset.rows.length; ++r) {
-                        var tr = tbody.appendChild(make('tr'));
-                        var row = resultset.rows[r];
-                        var rownum = tr.appendChild(make('td'));
-                        rownum.innerText = '' + (r + 1);
-                        rownum.classList.add('rownum');
-                        for (var c = 0; c < row.length; ++c) {
-                            var td = tr.appendChild(make('td'));
-                            td.innerText = '' + row[c];
-                        }
-                    }
-                }
-
-                setProp(tables.style, 'width', '' + find('query').clientWidth + 'px');
-                var newHeight = (window.innerHeight - 48 - find('trCmdBar').clientHeight - find('trQuery').clientHeight);
-                setProp(tables.style, 'height', '' + newHeight + 'px');
-                show('tables');
-            }
+            success: showQueryResults
         });
-
-        return false;
+        return true;
     });
 
     // Connect:
@@ -328,6 +373,33 @@ function initApp() {
                 show('databases');
             }
         });
+        return false;
+    });
+
+    // Execute:
+    bindEvent(find('btnExecute'), 'click', function (e) {
+        if (queryXhr !== null) {
+            alert('A query is already executing. Please wait or cancel it.');
+            find('btnCancel').disabled = false;
+            return;
+        }
+
+        // Get selected query text:
+        var query = getSelectedQueryText();
+
+        hide('tables');
+        hide('divErrors');
+
+        // Execute query asynchronously:
+        queryXhr = runQuery({
+            query: query,
+            rowcount: v('rowcount'),
+            before: function () { find('btnExecute').disabled = true; find('btnCancel').disabled = false; },
+            after: function () { queryXhr = null; find('btnExecute').disabled = false; find('btnCancel').disabled = true; },
+            error: handleSqlAshxError,
+            success: showQueryResults
+        });
+
         return false;
     });
 }
