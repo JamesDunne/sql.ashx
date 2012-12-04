@@ -63,6 +63,10 @@ input:disabled {
     background-color: #2c2c2c;
     color: #999;
 }
+input.highlight {
+    background-color: #303010 !important;
+    outline: 1px solid #992 !important;
+}
 ::-webkit-input-placeholder {
     color: #555;
 }
@@ -428,6 +432,15 @@ function showQueryResultsError(rsp) {
     } else {
         // single error:
         setTextContent(ul.appendChild(make('li')), rsp.error);
+
+        if (rsp.error === 'Unauthorized') {
+            // highlight the auid/apwd controls:
+            var auid = find('auid');
+            var apwd = find('apwd');
+            auid.classList.add('highlight');
+            apwd.classList.add('highlight');
+            auid.focus();
+        }
     }
 
     show('divErrors');
@@ -435,6 +448,10 @@ function showQueryResultsError(rsp) {
 }
 
 function showQueryResultsBefore() {
+    var auid = find('auid');
+    var apwd = find('apwd');
+    auid.classList.remove('highlight');
+    apwd.classList.remove('highlight');
     hide('tables');
     hide('divErrors');
     hide('txtMsec');
