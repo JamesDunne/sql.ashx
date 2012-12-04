@@ -8,7 +8,7 @@ body, p, div, span, table, input, button, textarea, pre, a, ol, h1, h2, h3, h4, 
     border-spacing: 0px 0px;
     padding: 0;
     margin: 0;
-    color: #999999;
+    color: #aaa;
 }
 body {
     font-family: Segoe UI, Verdana, Tahoma;
@@ -50,6 +50,9 @@ table td, table th {
     text-align: left;
     vertical-align: top;
 }
+table.padded td, table.padded th {
+    padding: 1px 2px 1px 2px;
+}
 input {
     border: 1px solid gray;
     background-color: #101010;
@@ -60,6 +63,12 @@ input:disabled {
     background-color: #2c2c2c;
     color: #999;
 }
+::-webkit-input-placeholder {
+    color: #555;
+}
+input:-moz-placeholder {
+    color: #555;
+}
 textarea, pre {
     font-family: 'Anonymous Pro', Consolas, 'Courier New', 'Lucida Console', monospace;
 }
@@ -67,29 +76,40 @@ textarea {
     background-color: #101010;
     color: #bbb;
 }
+.nowrap {
+    white-space: nowrap;
+}
 input.sidebar {
     width: 240px;
 }
 input.sidebar-half {
     width: 100px;
 }
-.tblResults {
+table.tblResults {
     border-spacing: 0px;
 }
-.tblResults > tbody > tr > th {
+table.tblResults > tbody > tr > th {
     padding: 1px 2px 1px 2px;
     white-space: nowrap;
-    background-color: #101010;
+    background-color: #0c0c10;
     color: #aaa;
 }
-.tblResults > tbody > tr > td {
+table.tblResults > tbody > tr > td {
     padding: 1px 2px 1px 2px;
 }
-.nowrap {
-    white-space: nowrap;
+table.tblResults > tbody > tr:nth-child(2n+0) > td {
+    background-color: #151515;
+}
+table.tblResults > tbody > tr:nth-child(2n+1) > td {
+    background-color: #1c1c1c;
+}
+table.tblResults > tbody > tr:nth-child(2n+0) > td.nullv {
+    background-color: #1f1010 !important;
+}
+table.tblResults > tbody > tr:nth-child(2n+1) > td.nullv {
+    background-color: #251717 !important;
 }
 td.nullv {
-    background-color: #1f1010 !important;
     color: #bbb;
     text-align: center;
     font-weight: bold;
@@ -97,15 +117,15 @@ td.nullv {
 td.rownum {
     font-weight: bold;
     text-align: right;
-    background-color: #101010 !important;
+    background-color: #0c0c10 !important;
     padding-right: 2px;
     padding-left: 2px;
 }
 td.sepright {
-    border-right: 8px solid transparent;
+    border-right: 4px solid transparent;
 }
 td.septop {
-    border-top: 8px solid transparent;
+    border-top: 4px solid transparent;
 }
 /* NOTE(jsd): More web FAIL. No way for FF to set custom scrollbar. */
 #tables::-webkit-scrollbar {
@@ -127,50 +147,51 @@ td.septop {
     </style>
 </head>
 <body>
-    <table border="0" style="width: 100%"><tbody><tr>
+    <table border="0" style="width: 100%" class="padded"><tbody><tr>
         <td class="sepright">
-            <div id="divBtnSidebar" style="position: absolute; left: 312px">
+            <div id="divBtnSidebar" style="position: absolute; left: 324px">
                 <button type="button" id="btnSidebar" title="Hide sidebar">&lt;</button>
             </div>
             <div id="sidebarPlaceholder" style="display: none; width: 16px; height: 100%"></div>
             <table id="sidebar" border="0">
                 <tbody>
                     <tr>
-                        <td class="nowrap">Auth:</td>
+                        <td class="nowrap">User:</td>
                         <td class="nowrap"><div>
-                            <input id="auid" class="sidebar-half" type="text" value="username" />&nbsp;
-                            <input id="apwd" class="sidebar-half" type="password" value="password" />
+                            <input id="auid" class="sidebar-half" type="text" value="username" title="Username" placeholder="username" />&nbsp;
+                            <input id="apwd" class="sidebar-half" type="password" value="password" title="Password" placeholder="password" />
                         </div></td>
                     </tr>
                     <tr><td colspan="2">&nbsp;</td></tr>
+                    <tr><td colspan="2">Connection String:</td></tr>
                     <tr>
                         <td class="nowrap">Data Source:</td>
-                        <td><input id="ds" class="sidebar" type="text" value="."/></td>
+                        <td><input id="ds" class="sidebar" type="text" value="." placeholder="(server)\(instance)"/></td>
                     </tr>
                     <tr>
                         <td class="nowrap">Initial Catalog:</td>
-                        <td><input id="ic" class="sidebar" type="text" value="master"/></td>
+                        <td><input id="ic" class="sidebar" type="text" value="master" placeholder="database"/></td>
                     </tr>
                     <tr>
                         <td style="padding-top: 5px">&nbsp;</td>
-                        <td style="padding-top: 5px"><input id="intsec" type="checkbox" checked="checked" />&nbsp;<label for="intsec">Integrated Security</label></td>
+                        <td style="padding-top: 5px"><input id="intsec" type="checkbox" checked="checked"/>&nbsp;<label for="intsec">Integrated Security</label></td>
                     </tr>
                     <tr>
                         <td class="nowrap">User ID:</td>
-                        <td><input id="uid" class="sidebar" type="text" value="" disabled="disabled" /></td>
+                        <td><input id="uid" class="sidebar" type="text" value="" disabled="disabled" placeholder="user ID" title="Connection String User ID" /></td>
                     </tr>
                     <tr>
                         <td class="nowrap">Password:</td>
-                        <td><input id="pwd" class="sidebar" type="password" value="" disabled="disabled" /></td>
+                        <td><input id="pwd" class="sidebar" type="password" value="" disabled="disabled" placeholder="password" title="Connection String Password" /></td>
+                    </tr>
+                    <tr>
+                        <td class="nowrap">Timeout:</td>
+                        <td><input id="timeout" class="sidebar" type="text" value="30" placeholder="timeout (secs)" title="Number of seconds to wait for command execution" /></td>
                     </tr>
                     <tr><td colspan="2">&nbsp;</td></tr>
                     <tr>
-                        <td class="nowrap">Timeout:</td>
-                        <td><input id="timeout" class="sidebar" type="text" value="30"/></td>
-                    </tr>
-                    <tr>
                         <td class="nowrap">Row Count:</td>
-                        <td><input id="rowcount" class="sidebar" type="text" value="100"/></td>
+                        <td><input id="rowcount" class="sidebar" type="number" value="100" min="0" max="50000" step="10" style="width: 64px; text-align: right" title="Limit number of rows (0 for unlimited)" /></td>
                     </tr>
                     <tr>
                         <td colspan="2" class="septop">
@@ -186,10 +207,17 @@ td.septop {
         <td style="width: 100%"><table border="0" style="width: 100%"><tbody>
             <tr id="trCmdBar">
                 <td style="height: 28px">
-                    <button type="button" id="btnExecute">Execute</button>&nbsp;
-                    <button type="button" id="btnCancel" disabled="disabled">Cancel</button>&nbsp;
-                    <button type="button" id="btnLink">Update Link</button>&nbsp;
-                    <a id="selflink" href="#" style="display: none" title="Open query in new window" target="_blank">link</a>
+                    <div style="float: left">
+                        <button type="button" id="btnExecute">Execute</button>&nbsp;
+                        <button type="button" id="btnCancel" disabled="disabled">Cancel</button>&nbsp;
+                        <input type="checkbox" id="chkHeadRepeat" checked="checked" /><label for="chkHeadRepeat">&nbsp;Header repeats every&nbsp;</label>
+                        <input type="number" id="numHeadRepeat" value="20" style="width: 56px; text-align: right" min="10" max="2000" step="10" /><label for="numHeadRepeat">&nbsp;rows</label>&nbsp;
+                        <input type="checkbox" id="chkRowNumbers" checked="checked" /><label for="chkRowNumbers">&nbsp;Show row rumbers</label>
+                    </div>
+                    <div style="float: right">
+                        <a id="selflink" href="#" style="display: none" title="Open query in new window" target="_blank">link</a>
+                        <button type="button" id="btnLink">Update Link</button>&nbsp;
+                    </div>
                 </td>
             </tr>
             <tr id="trQuery">
@@ -204,10 +232,12 @@ td.septop {
                             <h3>Errors</h3>
                             <ul id="ulErrors"></ul>
                         </div>
-                        <div>
-                            <h3>Results</h3>
-                            <div id="tables" style="overflow-x: auto"></div>
+                        <div style="float: right">
+                            <span id="txtMsec"></span>
                         </div>
+                        <h3>Results</h3>
+                        <div style="clear: both"></div>
+                        <div id="tables" style="overflow-x: auto"></div>
                     </div>
                 </td>
             </tr>
@@ -237,10 +267,20 @@ function initApp() {
     // NOTE(jsd): Web FAIL. No resize events for textarea in Chrome or FF17.
     //bindEvent(find('query'), 'resize', function (e) { console.log(e); resizeResults(); });
 
+    // Change head repeat checkbox:
+    bindEvent(find('chkHeadRepeat'), 'change', function (e) {
+        if (find('chkHeadRepeat').checked) {
+            find('numHeadRepeat').disabled = false;
+        } else {
+            find('numHeadRepeat').disabled = true;
+        }
+    });
+
+    // Show/hide sidebar:
     bindEvent(find('btnSidebar'), 'click', function (e) {
         if (toggle('sidebar')) {
             hide('sidebarPlaceholder');
-            setProp(find('divBtnSidebar').style, 'left', '312px');
+            setProp(find('divBtnSidebar').style, 'left', '324px');
             var btn = find('btnSidebar');
             btn.setAttribute('title', 'Hide sidebar');
             setTextContent(btn, '<');
@@ -397,6 +437,7 @@ function showQueryResultsError(rsp) {
 function showQueryResultsBefore() {
     hide('tables');
     hide('divErrors');
+    hide('txtMsec');
     find('btnExecute').disabled = true;
     find('btnCancel').disabled = false;
 }
@@ -429,6 +470,15 @@ function showQueryResults(rsp) {
     var tables = find('tables');
     clearAllChildren(tables);
 
+    var repeatHead = find('chkHeadRepeat').checked;
+    var repeatHeadEvery = v('numHeadRepeat');
+    var showRowNumber = find('chkRowNumbers').checked;
+
+    // Display timing:
+    if (rsp.timing) {
+        setTextContent(find('txtMsec'), rsp.timing.total + ' ms');
+    }
+
     // Enumerate all results and create tables for them:
     for (var n = 0; n < rsp.results.length; ++n) {
         var resultset = rsp.results[n];
@@ -447,12 +497,16 @@ function showQueryResults(rsp) {
         var tbody = tbl.appendChild(make('tbody'));
 
         for (var r = 0; r < resultset.rows.length; ++r) {
-            // Make a head row every 20 rows:
-            if (r % 20 == 0) {
+            // Make a head row every N rows or just once:
+            if ((repeatHead && (r % repeatHeadEvery == 0)) || (r == 0)) {
                 var headrow = tbody.appendChild(make('tr'));
-                var thnum = headrow.appendChild(make('th'));
-                setTextContent(thnum, '#');
-                setProp(thnum.style, 'text-align', 'right');
+
+                if (showRowNumber) {
+                    var thnum = headrow.appendChild(make('th'));
+                    setTextContent(thnum, '#');
+                    setProp(thnum.style, 'text-align', 'right');
+                }
+
                 for (var i = 0; i < resultset.columns.length; ++i) {
                     var th = headrow.appendChild(make('th'));
                     var ci = colInfos[i];
@@ -466,9 +520,13 @@ function showQueryResults(rsp) {
             // Make a data row:
             var tr = tbody.appendChild(make('tr'));
             var row = resultset.rows[r];
-            var rownum = tr.appendChild(make('td'));
-            setTextContent(rownum, (r + 1));
-            rownum.classList.add('rownum');
+
+            if (showRowNumber) {
+                var tdrownum = tr.appendChild(make('td'));
+                setTextContent(tdrownum, (r + 1));
+                tdrownum.classList.add('rownum');
+            }
+
             for (var c = 0; c < row.length; ++c) {
                 var td = tr.appendChild(make('td'));
 
@@ -492,7 +550,7 @@ function showQueryResults(rsp) {
                 }
 
                 // Right-align numerics:
-                if (bt == 'int' || bt == 'smallint' || bt == 'tinyint' || bt == 'datetime') {
+                if (bt == 'int' || bt == 'smallint' || bt == 'tinyint') {
                     setProp(td.style, 'text-align', 'right');
                 }
 
@@ -508,8 +566,8 @@ function showQueryResults(rsp) {
         }
     }
 
-    resizeResults();
     show('tables');
+    show('txtMsec');
 }
 
 function prepopulate() {
@@ -564,9 +622,9 @@ function getSelectedQueryText() {
 
 function resizeResults() {
     var tables = find('tables');
-    var newWidth = window.innerWidth - 24 - find('sidebar').offsetWidth - find('sidebarPlaceholder').offsetWidth;
+    var newWidth = window.innerWidth - 32 - find('sidebar').offsetWidth - find('sidebarPlaceholder').offsetWidth;
     setProp(tables.style, 'width', '' + newWidth + 'px');
-    var newHeight = window.innerHeight - 16 - (find('trResults').offsetHeight - tables.offsetHeight) - find('trCmdBar').offsetHeight - find('trQuery').offsetHeight;
+    var newHeight = window.innerHeight - 20 - (find('trResults').offsetHeight - tables.offsetHeight) - find('trCmdBar').offsetHeight - find('trQuery').offsetHeight;
     setProp(tables.style, 'height', '' + newHeight + 'px');
 }
 
@@ -652,9 +710,15 @@ function toggle(id) {
 function v(id, setValue) {
     var el = find(id);
     if (el === null) return null;
-    if (setValue !== undefined)
-        el.value = setValue;
-    return el.value;
+    if (el.valueAsNumber) {
+        if (setValue !== undefined)
+            el.valueAsNumber = setValue;
+        return el.valueAsNumber;
+    } else if (el.value) {
+        if (setValue !== undefined)
+            el.value = setValue;
+        return el.value;
+    }
 }
 
 function clearAllChildren(el) {

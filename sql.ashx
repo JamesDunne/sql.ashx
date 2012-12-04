@@ -269,7 +269,11 @@ namespace AdHocQuery
                 cmd.CommandType = CommandType.Text;
                 cmd.CommandTimeout = cmdTimeout;
 
+                // Use some stopwatch timers:
+                System.Diagnostics.Stopwatch swOpen, swExec;
+
                 // Connect to the SQL server:
+                swOpen = System.Diagnostics.Stopwatch.StartNew();
                 try
                 {
 #if NET_4_5
@@ -277,15 +281,18 @@ namespace AdHocQuery
 #else
                     cn.Open();
 #endif
+                    swOpen.Stop();
                 }
                 catch (Exception ex)
                 {
+                    swOpen.Stop();
                     ReportException(ctx, ex);
                     return;
                 }
 
                 // Execute the query:
                 SqlDataReader dr;
+                swExec = System.Diagnostics.Stopwatch.StartNew();
                 try
                 {
 #if NET_4_5
@@ -293,9 +300,11 @@ namespace AdHocQuery
 #else
                     dr = cmd.ExecuteReader(CommandBehavior.CloseConnection | CommandBehavior.SequentialAccess);
 #endif
+                    swExec.Stop();
                 }
                 catch (Exception ex)
                 {
+                    swExec.Stop();
                     ReportException(ctx, ex);
                     return;
                 }
@@ -304,6 +313,17 @@ namespace AdHocQuery
                 jtw.WriteStartObject();
                 jtw.WritePropertyName("success");
                 jtw.WriteValue(true);
+
+                // Write timing information:
+                jtw.WritePropertyName("timing");
+                jtw.WriteStartObject();
+                jtw.WritePropertyName("open");
+                jtw.WriteValue(swOpen.ElapsedMilliseconds);
+                jtw.WritePropertyName("exec");
+                jtw.WriteValue(swExec.ElapsedMilliseconds);
+                jtw.WritePropertyName("total");
+                jtw.WriteValue((long) (swOpen.Elapsed + swExec.Elapsed).TotalMilliseconds);
+                jtw.WriteEndObject();
 
                 // Read the results:
                 using (dr)
