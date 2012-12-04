@@ -199,11 +199,11 @@ function showQueryResultsError(rsp) {
         // multiple errors:
         for (var i = 0; i < rsp.errors.length; ++i) {
             // TODO: make clickable to select line in textarea!
-            ul.appendChild(make('li')).innerText = rsp.errors[i].message;
+            setTextContent(ul.appendChild(make('li')), rsp.errors[i].message);
         }
     } else {
         // single error:
-        ul.appendChild(make('li')).innerText = rsp.error;
+        setTextContent(ul.appendChild(make('li')), rsp.error);
     }
 
     show('divErrors');
@@ -241,21 +241,21 @@ function showQueryResults(rsp) {
         // Make the head row:
         var headrow = thead.appendChild(make('tr'));
         var thnum = headrow.appendChild(make('th'));
-        thnum.innerText = '#';
+        setTextContent(thnum, '#');
         setProp(thnum.style, 'textAlign', 'right');
         for (var i = 0; i < resultset.columns.length; ++i)
-            headrow.appendChild(make('th')).innerText = resultset.columns[i];
+            setTextContent(headrow.appendChild(make('th')), resultset.columns[i]);
 
         // Make the data rows:
         for (var r = 0; r < resultset.rows.length; ++r) {
             var tr = tbody.appendChild(make('tr'));
             var row = resultset.rows[r];
             var rownum = tr.appendChild(make('td'));
-            rownum.innerText = '' + (r + 1);
+            setTextContent(rownum, (r + 1));
             rownum.classList.add('rownum');
             for (var c = 0; c < row.length; ++c) {
                 var td = tr.appendChild(make('td'));
-                td.innerText = '' + row[c];
+                setTextContent(td, row[c]);
             }
         }
     }
@@ -394,7 +394,7 @@ function initApp() {
                 clearAllChildren(dbs);
                 for (var i = 0; i < rows.length; ++i) {
                     var li = make('li');
-                    li.innerText = rows[i][0];                  // [name]
+                    setTextContent(li, rows[i][0]);                  // [name]
                     li.setAttribute('data-id', rows[i][1]);     // [database_id]
                     dbs.appendChild(li);
                 }
@@ -501,9 +501,13 @@ function v(id, setValue) {
 }
 
 function clearAllChildren(el) {
-    while (el.firstChild) {
+    while (el.firstChild)
         el.removeChild(el.firstChild);
-    }
+}
+
+function setTextContent(el, text) {
+    clearAllChildren(el);
+    el.appendChild(document.createTextNode(text));
 }
 
 function getParameterByName(name) {
