@@ -261,12 +261,12 @@ String.prototype.endsWith = function(e) {
 }
 
 function parseColumnInfo(raw) {
-    var ci = { name: '', type: '', basetype: '', isNullable: false };
+    var ci = { name: '', type: '', basetype: '', isNullable: true };
     var endsq = raw.indexOf(']');
     ci.name = raw.substring(1, endsq);
     ci.type = raw.substring(endsq + 2, raw.length);
     if (ci.type.endsWith(' NOT NULL')) {
-        ci.isNullable = true;
+        ci.isNullable = false;
         ci.type = ci.type.substring(0, ci.type.length - ' NOT NULL'.length);
     }
     ci.basetype = ci.type;
