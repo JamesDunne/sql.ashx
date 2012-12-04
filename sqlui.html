@@ -217,13 +217,137 @@ document.onreadystatechange = function () {
         initApp();
 };
 
+String.prototype.endsWith = function (e) {
+    return this.substring(this.length - e.length, this.length) == e;
+}
+
 var queryXhr = null;
 
-function bindEvent(target, type, listener) {
-    if (target.addEventListener)
-        target.addEventListener(type, listener, false);
-    else
-        target.attachEvent('on' + type, listener);
+function initApp() {
+    // Parse the query string and pre-populate fields:
+    prepopulate();
+
+    // Window resize:
+    bindEvent(window, 'resize', function (e) { resizeResults(); });
+    // Textarea resize:
+    // NOTE(jsd): Web FAIL. No resize events for textarea in Chrome or FF17.
+    //bindEvent(find('query'), 'resize', function (e) { console.log(e); resizeResults(); });
+
+    // Update UI on "Integrated Security" checkbox change:
+    bindEvent(find('intsec'), 'change', function (e) {
+        var intsec = find('intsec').checked;
+        find('uid').disabled = intsec;
+        find('pwd').disabled = intsec;
+    });
+
+    // Cancel:
+    bindEvent(find('btnCancel'), 'click', function (e) {
+        if (queryXhr === null) return;
+        queryXhr.abort();
+    });
+
+    // Update link:
+    bindEvent(find('btnLink'), 'click', function (e) {
+        var url = window.location.pathname + '?' + genQueryString();
+        var selflink = find('selflink');
+        selflink.setAttribute('href', url);
+        show('selflink');
+    });
+
+    // textarea keyboard shortcuts:
+    bindEvent(find('query'), 'keydown', function (e) {
+        if (!e.ctrlKey) {
+            if (e.keyCode === 116) {
+                // e.keyIdentifier == "F5"
+                // F5 - execute query
+                executeHighlightedQuery();
+                e.preventDefault();
+                return true;
+            }
+            return false;
+        }
+
+        var highlighted = getSelectedQueryText();
+        var query = null;
+        var rowcount = 0;
+
+        if (e.keyCode === '5'.charCodeAt(0)) {
+            // CTRL-5: sp_helptext;
+            query = 'exec sp_helptext \'' + highlighted.replace('\'', '\'\'') + '\'';
+        } else if (e.keyCode === '6'.charCodeAt(0)) {
+            // CTRL-6: sp_columns;
+            query = 'exec sp_columns \'' + highlighted.replace('\'', '\'\'') + '\'';
+        } else if (e.keyCode === '0'.charCodeAt(0)) {
+            // CTRL-0: SELECT * FROM;
+            query = 'SELECT * FROM ' + highlighted;
+            rowcount = v('rowcount');
+        }
+
+        if (query === null) return false;
+
+        queryXhr = runQuery({
+            query: query,
+            rowcount: rowcount,
+            before: showQueryResultsBefore,
+            after: showQueryResultsAfter,
+            error: showQueryResultsError,
+            success: showQueryResults
+        });
+
+        // Stop the browser from responding to the keystroke:
+        e.preventDefault();
+        return true;
+    });
+
+    // Connect:
+    bindEvent(find('btnConnect'), 'click', function (e) {
+        hide('databases');
+        runQuery({
+            query: "SELECT [name],[database_id] FROM sys.databases ORDER BY [name] ASC",
+            error: showQueryResultsError,
+            success: function (rsp) {
+                var rows = rsp.results[0].rows;
+                var dbs = find('databases');
+                clearAllChildren(dbs);
+                for (var i = 0; i < rows.length; ++i) {
+                    var li = make('li');
+                    setTextContent(li, rows[i][0]);                  // [name]
+                    li.setAttribute('data-id', rows[i][1]);     // [database_id]
+                    dbs.appendChild(li);
+                }
+                show('databases');
+            }
+        });
+        return false;
+    });
+
+    // Execute:
+    bindEvent(find('btnExecute'), 'click', function (e) {
+        executeHighlightedQuery();
+        e.preventDefault();
+        return false;
+    });
+}
+
+function executeHighlightedQuery() {
+    if (queryXhr !== null) {
+        alert('A query is already executing. Please wait or cancel it.');
+        find('btnCancel').disabled = false;
+        return;
+    }
+
+    // Get selected query text:
+    var query = getSelectedQueryText();
+
+    // Execute query asynchronously:
+    queryXhr = runQuery({
+        query: query,
+        rowcount: v('rowcount'),
+        before: showQueryResultsBefore,
+        after: showQueryResultsAfter,
+        error: showQueryResultsError,
+        success: showQueryResults
+    });
 }
 
 function showQueryResultsError(rsp) {
@@ -254,10 +378,6 @@ function showQueryResultsAfter() {
     queryXhr = null;
     find('btnExecute').disabled = false;
     find('btnCancel').disabled = true;
-}
-
-String.prototype.endsWith = function(e) {
-    return this.substring(this.length - e.length, this.length) == e;
 }
 
 function parseColumnInfo(raw) {
@@ -422,117 +542,6 @@ function resizeResults() {
     setProp(tables.style, 'height', '' + newHeight + 'px');
 }
 
-function initApp() {
-    // Parse the query string and pre-populate fields:
-    prepopulate();
-
-    // Window resize:
-    bindEvent(window, 'resize', function (e) { resizeResults(); });
-    // Textarea resize:
-    // NOTE(jsd): Web FAIL. No resize events for textarea in Chrome or FF17.
-    //bindEvent(find('query'), 'resize', function (e) { console.log(e); resizeResults(); });
-
-    // Update UI on "Integrated Security" checkbox change:
-    bindEvent(find('intsec'), 'change', function (e) {
-        var intsec = find('intsec').checked;
-        find('uid').disabled = intsec;
-        find('pwd').disabled = intsec;
-    });
-
-    // Cancel:
-    bindEvent(find('btnCancel'), 'click', function (e) {
-        if (queryXhr === null) return;
-        queryXhr.abort();
-    });
-
-    // Update link:
-    bindEvent(find('btnLink'), 'click', function (e) {
-        var url = window.location.pathname + '?' + genQueryString();
-        var selflink = find('selflink');
-        selflink.setAttribute('href', url);
-        show('selflink');
-    });
-
-    // textarea keyboard shortcuts:
-    bindEvent(find('query'), 'keydown', function (e) {
-        if (!e.ctrlKey) return false;
-
-        var highlighted = getSelectedQueryText();
-        var query = null;
-        var rowcount = 0;
-
-        if (e.keyCode == '5'.charCodeAt(0)) {
-            // CTRL-5: sp_helptext;
-            query = 'exec sp_helptext \'' + highlighted.replace('\'', '\'\'') + '\'';
-        } else if (e.keyCode == '6'.charCodeAt(0)) {
-            // CTRL-6: sp_columns;
-            query = 'exec sp_columns \'' + highlighted.replace('\'', '\'\'') + '\'';
-        } else if (e.keyCode == '0'.charCodeAt(0)) {
-            // CTRL-0: SELECT * FROM;
-            query = 'SELECT * FROM ' + highlighted;
-            rowcount = v('rowcount');
-        }
-
-        if (query === null) return false;
-
-        queryXhr = runQuery({
-            query: query,
-            rowcount: rowcount,
-            before: showQueryResultsBefore,
-            after: showQueryResultsAfter,
-            error: showQueryResultsError,
-            success: showQueryResults
-        });
-        return true;
-    });
-
-    // Connect:
-    bindEvent(find('btnConnect'), 'click', function (e) {
-        hide('databases');
-        runQuery({
-            query: "SELECT [name],[database_id] FROM sys.databases ORDER BY [name] ASC",
-            error: showQueryResultsError,
-            success: function (rsp) {
-                var rows = rsp.results[0].rows;
-                var dbs = find('databases');
-                clearAllChildren(dbs);
-                for (var i = 0; i < rows.length; ++i) {
-                    var li = make('li');
-                    setTextContent(li, rows[i][0]);                  // [name]
-                    li.setAttribute('data-id', rows[i][1]);     // [database_id]
-                    dbs.appendChild(li);
-                }
-                show('databases');
-            }
-        });
-        return false;
-    });
-
-    // Execute:
-    bindEvent(find('btnExecute'), 'click', function (e) {
-        if (queryXhr !== null) {
-            alert('A query is already executing. Please wait or cancel it.');
-            find('btnCancel').disabled = false;
-            return;
-        }
-
-        // Get selected query text:
-        var query = getSelectedQueryText();
-
-        // Execute query asynchronously:
-        queryXhr = runQuery({
-            query: query,
-            rowcount: v('rowcount'),
-            before: showQueryResultsBefore,
-            after: showQueryResultsAfter,
-            error: showQueryResultsError,
-            success: showQueryResults
-        });
-
-        return false;
-    });
-}
-
 function runQuery(opts) {
     var auid = v('auid');
     var apwd = v('apwd');
@@ -623,6 +632,13 @@ function getParameterByName(name) {
         return null;
     else
         return decodeURIComponent(results[1].replace(/\+/g, " "));
+}
+
+function bindEvent(target, type, listener) {
+    if (target.addEventListener)
+        target.addEventListener(type, listener, false);
+    else
+        target.attachEvent('on' + type, listener);
 }
 
 var Base64 = {
