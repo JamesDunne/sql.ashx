@@ -324,8 +324,12 @@ function initApp() {
     // Connect:
     bindEvent(find('btnConnect'), 'click', function (e) {
         hide('databases');
+        hide('divErrors');
+        resizeResults();
         runQuery({
             query: "SELECT [name],[database_id] FROM sys.databases ORDER BY [name] ASC",
+            before: function () { find('btnConnect').disabled = true; },
+            after: function () { find('btnConnect').disabled = false; },
             error: showQueryResultsError,
             success: function (rsp) {
                 var rows = rsp.results[0].rows;
@@ -387,6 +391,7 @@ function showQueryResultsError(rsp) {
     }
 
     show('divErrors');
+    resizeResults();
 }
 
 function showQueryResultsBefore() {
@@ -397,6 +402,7 @@ function showQueryResultsBefore() {
 }
 
 function showQueryResultsAfter() {
+    resizeResults();
     queryXhr = null;
     find('btnExecute').disabled = false;
     find('btnCancel').disabled = true;
