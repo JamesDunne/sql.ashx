@@ -4,7 +4,7 @@
 <head>
     <title>SQL Query</title>
     <style type="text/css">
-body, p, div, span, table, input, button, textarea, a, ol, h1, h2, h3, h4, h5, h6 {
+body, p, div, span, table, input, button, textarea, pre, a, ol, h1, h2, h3, h4, h5, h6 {
     border-spacing: 0px 0px;
     padding: 0;
     margin: 0;
@@ -55,8 +55,10 @@ input {
     background-color: #101010;
     color: #bbb;
 }
-textarea {
+textarea, pre {
     font-family: 'Anonymous Pro', Consolas, 'Courier New', 'Lucida Console', monospace;
+}
+textarea {
     background-color: #101010;
     color: #bbb;
 }
@@ -69,13 +71,23 @@ input.sidebar-half {
 .tblResults {
     border-spacing: 0px;
 }
-.tblResults > thead > tr > th {
+.tblResults > tbody > tr > th {
+    padding: 1px 2px 1px 2px;
     white-space: nowrap;
     background-color: #101010;
-    color: #777;
+    color: #aaa;
+}
+.tblResults > tbody > tr > td {
+    padding: 1px 2px 1px 2px;
 }
 .nowrap {
     white-space: nowrap;
+}
+td.nullv {
+    background-color: #1f1010 !important;
+    color: #bbb;
+    text-align: center;
+    font-weight: bold;
 }
 td.rownum {
     font-weight: bold;
@@ -222,6 +234,27 @@ function showQueryResultsAfter() {
     find('btnCancel').disabled = true;
 }
 
+String.prototype.endsWith = function(e) {
+    return this.substring(this.length - e.length, this.length) == e;
+}
+
+function parseColumnInfo(raw) {
+    var ci = { name: '', type: '', basetype: '', isNullable: false };
+    var endsq = raw.indexOf(']');
+    ci.name = raw.substring(1, endsq);
+    ci.type = raw.substring(endsq + 2, raw.length);
+    if (ci.type.endsWith(' NOT NULL')) {
+        ci.isNullable = true;
+        ci.type = ci.type.substring(0, ci.type.length - ' NOT NULL'.length);
+    }
+    ci.basetype = ci.type;
+    var lpidx = ci.basetype.indexOf('(');
+    if (lpidx >= 0) {
+        ci.basetype = ci.basetype.substring(0, lpidx);
+    }
+    return ci;
+}
+
 function showQueryResults(rsp) {
     var tables = find('tables');
     clearAllChildren(tables);
@@ -230,24 +263,37 @@ function showQueryResults(rsp) {
     for (var n = 0; n < rsp.results.length; ++n) {
         var resultset = rsp.results[n];
 
+        // Parse the column info:
+        var colInfos = new Array(resultset.columns.length);
+        for (var i = 0; i < resultset.columns.length; ++i)
+            colInfos[i] = parseColumnInfo(resultset.columns[i]);
+
+        // Make the table:
         var tbl = tables.appendChild(make('table'));
         tbl.classList.add('tblResults');
         tbl.setAttribute('border', '1');
         setProp(tbl.style, 'width', find('query').clientWidth + ' px');
 
-        var thead = tbl.appendChild(make('thead'));
         var tbody = tbl.appendChild(make('tbody'));
 
-        // Make the head row:
-        var headrow = thead.appendChild(make('tr'));
-        var thnum = headrow.appendChild(make('th'));
-        setTextContent(thnum, '#');
-        setProp(thnum.style, 'textAlign', 'right');
-        for (var i = 0; i < resultset.columns.length; ++i)
-            setTextContent(headrow.appendChild(make('th')), resultset.columns[i]);
-
-        // Make the data rows:
         for (var r = 0; r < resultset.rows.length; ++r) {
+            // Make a head row every 20 rows:
+            if (r % 20 == 0) {
+                var headrow = tbody.appendChild(make('tr'));
+                var thnum = headrow.appendChild(make('th'));
+                setTextContent(thnum, '#');
+                setProp(thnum.style, 'text-align', 'right');
+                for (var i = 0; i < resultset.columns.length; ++i) {
+                    var th = headrow.appendChild(make('th'));
+                    var ci = colInfos[i];
+                    th.setAttribute('data-basetype', ci.basetype);
+                    th.setAttribute('data-type', ci.type);
+                    th.setAttribute('title', ci.type + (ci.isNullable ? '' : ' NOT NULL'));
+                    setTextContent(th, ci.name);
+                }
+            }
+
+            // Make a data row:
             var tr = tbody.appendChild(make('tr'));
             var row = resultset.rows[r];
             var rownum = tr.appendChild(make('td'));
@@ -255,7 +301,39 @@ function showQueryResults(rsp) {
             rownum.classList.add('rownum');
             for (var c = 0; c < row.length; ++c) {
                 var td = tr.appendChild(make('td'));
-                setTextContent(td, row[c]);
+
+                var val = row[c];
+                var disp = val;
+
+                // Treat NULLs specially:
+                if (val === null) {
+                    td.classList.add('nullv');
+                    setTextContent(td, 'NULL');
+                    continue;
+                }
+
+                // TODO(jsd): Support more formatting cases based on types
+                var bt = colInfos[c].basetype;
+
+                // Booleans:
+                if (bt == 'bit') {
+                    disp = val ? '1' : '0';
+                    setProp(td.style, 'text-align', 'center');
+                }
+
+                // Right-align numerics:
+                if (bt == 'int' || bt == 'smallint' || bt == 'tinyint' || bt == 'datetime') {
+                    setProp(td.style, 'text-align', 'right');
+                }
+
+                // Pre-formatted text columns:
+                if (bt == 'varchar' || bt == 'nvarchar' || bt == 'char' || bt == 'nchar' || bt == 'text' || bt == 'ntext' || bt == 'datetime') {
+                    var pre = td.appendChild(make('pre'));
+                    setTextContent(pre, disp);
+                } else {
+                    // Regular left-aligned text:
+                    setTextContent(td, disp);
+                }
             }
         }
     }
@@ -327,9 +405,10 @@ function initApp() {
     prepopulate();
 
     // Window resize:
-    bindEvent(window, 'resize', function (e) {
-        resizeResults();
-    });
+    bindEvent(window, 'resize', function (e) { resizeResults(); });
+    // Textarea resize:
+    // NOTE(jsd): Web FAIL. No resize events for textarea in Chrome or FF17.
+    //bindEvent(find('query'), 'resize', function (e) { console.log(e); resizeResults(); });
 
     // Update UI on "Integrated Security" checkbox change:
     bindEvent(find('intsec'), 'change', function (e) {
@@ -353,7 +432,7 @@ function initApp() {
     });
 
     // textarea keyboard shortcuts:
-    bindEvent(find('query'), 'keyup', function (e) {
+    bindEvent(find('query'), 'keydown', function (e) {
         if (!e.ctrlKey) return false;
 
         var highlighted = getSelectedQueryText();
@@ -363,6 +442,9 @@ function initApp() {
         if (e.keyCode == '5'.charCodeAt(0)) {
             // CTRL-5: sp_helptext;
             query = 'exec sp_helptext \'' + highlighted.replace('\'', '\'\'') + '\'';
+        } else if (e.keyCode == '6'.charCodeAt(0)) {
+            // CTRL-6: sp_columns;
+            query = 'exec sp_columns \'' + highlighted.replace('\'', '\'\'') + '\'';
         } else if (e.keyCode == '0'.charCodeAt(0)) {
             // CTRL-0: SELECT * FROM;
             query = 'SELECT * FROM ' + highlighted;
