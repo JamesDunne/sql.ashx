@@ -4,7 +4,7 @@
 <head>
     <title>SQL Query</title>
     <style type="text/css">
-body, p, div, span, table, input, button, textarea, pre, a, ol, h1, h2, h3, h4, h5, h6 {
+body, p, div, span, table, input, button, select, textarea, pre, a, ol, h1, h2, h3, h4, h5, h6 {
     border-spacing: 0px 0px;
     padding: 0;
     margin: 0;
@@ -33,13 +33,13 @@ button {
     border-radius: 3px 3px;
     border-style: double;
     border-color: #1a1a1a;
-    background-color: #1f1f1f;
+    background-color: #242424;
     text-shadow: black 0.1em 0.1em 0.2em;
     cursor: pointer;
 }
 button:disabled {
     border-color: #2a2a2a;
-    background-color: #303030;
+    background-color: #343434;
     color: #aaa;
     text-shadow: #666 -0.1em -0.1em -0.2em;
     cursor: default;
@@ -53,12 +53,12 @@ table td, table th {
 table.padded td, table.padded th {
     padding: 1px 2px 1px 2px;
 }
-input {
+input, select {
     border: 1px solid gray;
     background-color: #101010;
     color: #bbb;
 }
-input:disabled {
+input:disabled, select:disabled {
     border: 1px solid gray;
     background-color: #2c2c2c;
     color: #999;
@@ -80,10 +80,20 @@ textarea {
     background-color: #101010;
     color: #bbb;
 }
+td.sidebar-label {
+    white-space: nowrap;
+    vertical-align: middle;
+}
 .nowrap {
     white-space: nowrap;
 }
 input.sidebar {
+    width: 240px;
+}
+input.sidebar-ds {
+    width: 208px
+}
+select.sidebar {
     width: 240px;
 }
 input.sidebar-half {
@@ -160,50 +170,45 @@ td.septop {
             <table id="sidebar" border="0">
                 <tbody>
                     <tr>
-                        <td class="nowrap">User:</td>
-                        <td class="nowrap"><div>
+                        <td class="sidebar-label">User:</td>
+                        <td class="sidebar-label"><div>
                             <input id="auid" class="sidebar-half" type="text" value="username" title="Username" placeholder="username" />&nbsp;
                             <input id="apwd" class="sidebar-half" type="password" value="password" title="Password" placeholder="password" />
                         </div></td>
                     </tr>
-                    <tr><td colspan="2">&nbsp;</td></tr>
-                    <tr><td colspan="2">Connection String:</td></tr>
-                    <tr>
-                        <td class="nowrap">Data Source:</td>
-                        <td><input id="ds" class="sidebar" type="text" value="." placeholder="(server)\(instance)"/></td>
-                    </tr>
-                    <tr>
-                        <td class="nowrap">Initial Catalog:</td>
-                        <td><input id="ic" class="sidebar" type="text" value="master" placeholder="database"/></td>
-                    </tr>
+                    <tr><td colspan="2" class="septop"></td></tr>
+                    <tr><td colspan="2"><strong>Connection String:</strong></td></tr>
                     <tr>
                         <td style="padding-top: 5px">&nbsp;</td>
                         <td style="padding-top: 5px"><input id="intsec" type="checkbox" checked="checked"/>&nbsp;<label for="intsec">Integrated Security</label></td>
                     </tr>
                     <tr>
-                        <td class="nowrap">User ID:</td>
+                        <td class="sidebar-label">User ID:</td>
                         <td><input id="uid" class="sidebar" type="text" value="" disabled="disabled" placeholder="user ID" title="Connection String User ID" /></td>
                     </tr>
                     <tr>
-                        <td class="nowrap">Password:</td>
+                        <td class="sidebar-label">Password:</td>
                         <td><input id="pwd" class="sidebar" type="password" value="" disabled="disabled" placeholder="password" title="Connection String Password" /></td>
                     </tr>
+                    <tr><td colspan="2" class="septop"></td></tr>
                     <tr>
-                        <td class="nowrap">Timeout:</td>
-                        <td><input id="timeout" class="sidebar" type="number" value="30" min="0" max="900" step="10" style="width: 64px; text-align: right" title="Number of seconds to wait for command execution" /></td>
-                    </tr>
-                    <tr><td colspan="2">&nbsp;</td></tr>
-                    <tr>
-                        <td class="nowrap">Row Count:</td>
-                        <td><input id="rowcount" class="sidebar" type="number" value="100" min="0" max="50000" step="10" style="width: 64px; text-align: right" title="Limit number of rows (0 for unlimited)" /></td>
+                        <td class="sidebar-label">Data Source:</td>
+                        <td><input id="ds" class="sidebar-ds" type="text" list="dataSources" placeholder="(server)\(instance)" title="Connection String Data Source" /><datalist id="dataSources"></datalist>&nbsp;<button id="btnConnect" type="button" title="Click to fetch catalog list">&hellip;</button></td>
                     </tr>
                     <tr>
-                        <td colspan="2" class="septop">
-                            <button id="btnConnect">Connect</button>
-                            <div id="explorer" style="width: 100%; overflow-x: auto; overflow-y: auto">
-                                <ul id="databases"></ul>
-                            </div>
+                        <td class="sidebar-label septop">Initial Catalog:</td>
+                        <td class="septop"><input id="ic" class="sidebar" type="text" list="catalogs" placeholder="catalog" title="Connection String Initial Catalog (click '&hellip;' button above to refresh list)"/>
+                            <datalist id="catalogs"></datalist>
                         </td>
+                    </tr>
+                    <tr>
+                        <td class="sidebar-label septop">Timeout:</td>
+                        <td class="septop"><input id="timeout" class="sidebar" type="number" value="30" min="0" max="900" step="10" style="width: 64px; text-align: right" title="Number of seconds to wait for command execution" /></td>
+                    </tr>
+                    <tr><td colspan="2" class="septop"></td></tr>
+                    <tr>
+                        <td class="sidebar-label">Row Count:</td>
+                        <td><input id="rowcount" class="sidebar" type="number" value="100" min="0" max="50000" step="10" style="width: 64px; text-align: right" title="Limit number of rows (0 for unlimited)" /></td>
                     </tr>
                 </tbody>
             </table>
@@ -226,7 +231,7 @@ td.septop {
             </tr>
             <tr id="trQuery">
                 <td style="height: 160px">
-                    <textarea name="query" id="query" style="width: 100%; height: 100%; word-wrap: normal; overflow: auto" autofocus="autofocus" spellcheck="false">SELECT 1</textarea>
+                    <textarea name="query" id="query" style="width: 100%; height: 100%; word-wrap: normal; overflow: auto; resize: none" autofocus="autofocus" spellcheck="false">SELECT 1</textarea>
                 </td>
             </tr>
             <tr id="trResults">
@@ -259,9 +264,33 @@ String.prototype.endsWith = function (e) {
     return this.substring(this.length - e.length, this.length) == e;
 }
 
+Array.prototype.contains = function (item) {
+    for (var i = 0; i < this.length; ++i)
+        if (this[i] === item) return true;
+    return false;
+}
+
+var defaultDsList = ['(local)'];
+
+var getDsList = !supports_html5_storage() ? function () { return defaultDsList; } : function () {
+    try {
+        return JSON.parse(localStorage.getItem('sqlui.dsList'));
+    } catch (e) {
+        return defaultDsList;
+    }
+}
+
+var setDsList = !supports_html5_storage() ? function () { } : function (dsList) {
+    localStorage.setItem('sqlui.dsList', JSON.stringify(dsList));
+}
+
 var queryXhr = null;
 
 function initApp() {
+    // Load and populate the dataSources <datalist>:
+    var dsList = getDsList();
+    loadDataSources(dsList);
+
     // Parse the query string and pre-populate fields:
     prepopulate();
 
@@ -284,12 +313,12 @@ function initApp() {
     bindEvent(find('btnSidebar'), 'click', function (e) {
         if (toggle('sidebar')) {
             hide('sidebarPlaceholder');
-            setProp(find('divBtnSidebar').style, 'left', '324px');
+            setStyle(find('divBtnSidebar'), 'left', '324px');
             var btn = find('btnSidebar');
             btn.setAttribute('title', 'Hide sidebar');
             setTextContent(btn, '<');
         } else {
-            setProp(find('divBtnSidebar').style, 'left', '8px');
+            setStyle(find('divBtnSidebar'), 'left', '8px');
             var btn = find('btnSidebar');
             btn.setAttribute('title', 'Show sidebar');
             setTextContent(btn, '>');
@@ -339,10 +368,10 @@ function initApp() {
 
         if (e.keyCode === '5'.charCodeAt(0)) {
             // CTRL-5: sp_helptext;
-            query = 'exec sp_helptext \'' + highlighted.replace('\'', '\'\'') + '\'';
+            query = 'EXEC sp_helptext \'' + highlighted.replace('\'', '\'\'') + '\'';
         } else if (e.keyCode === '6'.charCodeAt(0)) {
             // CTRL-6: sp_columns;
-            query = 'exec sp_columns \'' + highlighted.replace('\'', '\'\'') + '\'';
+            query = 'EXEC sp_columns \'' + highlighted.replace('\'', '\'\'') + '\'';
         } else if (e.keyCode === '0'.charCodeAt(0)) {
             // CTRL-0: SELECT * FROM;
             query = 'SELECT * FROM ' + highlighted;
@@ -367,27 +396,45 @@ function initApp() {
 
     // Connect:
     bindEvent(find('btnConnect'), 'click', function (e) {
-        hide('databases');
         hide('divErrors');
         resizeResults();
+
         runQuery({
-            query: "SELECT [name],[database_id] FROM sys.databases ORDER BY [name] ASC",
-            before: function () { find('btnConnect').disabled = true; },
-            after: function () { find('btnConnect').disabled = false; },
-            error: showQueryResultsError,
+            query:   'SELECT [name],[database_id] FROM sys.databases ORDER BY [name] ASC',
+            ic:      'master',
+            before:  function () { find('btnConnect').disabled = true; },
+            after:   function () { find('btnConnect').disabled = false; },
+            error:   showQueryResultsError,
             success: function (rsp) {
-                var rows = rsp.results[0].rows;
-                var dbs = find('databases');
-                clearAllChildren(dbs);
-                for (var i = 0; i < rows.length; ++i) {
-                    var li = make('li');
-                    setTextContent(li, rows[i][0]);             // [name]
-                    li.setAttribute('data-id', rows[i][1]);     // [database_id]
-                    dbs.appendChild(li);
+                // Add to the dsList:
+                try {
+                    var ds = v('ds');
+                    var dsList = getDsList();
+                    if (dsList && !dsList.contains(ds)) {
+                        dsList.push(v('ds'));
+                        setDsList(dsList);
+                        // Refresh the <datalist>:
+                        loadDataSources(dsList);
+                    }
+                } catch (e) {
+                    // don't care.
                 }
-                show('databases');
+
+                // Fill the catalogs <datalist>:
+                var dbs = find('catalogs');
+                clearAllChildren(dbs);
+
+                var rows = rsp.results[0].rows;
+                for (var i = 0; i < rows.length; ++i) {
+                    var opt = make('option');
+                    var dbname = rows[i][0];             // [name]
+                    setTextContent(opt, dbname);
+                    dbs.appendChild(opt);
+                }
             }
         });
+
+        e.preventDefault();
         return false;
     });
 
@@ -397,6 +444,41 @@ function initApp() {
         e.preventDefault();
         return false;
     });
+}
+
+function loadDataSources(dsList) {
+    // Fill the <datalist> element:
+    var ds = find('dataSources');
+    clearAllChildren(ds);
+    for (var i = 0; i < dsList.length; ++i) {
+        var opt = make('option');
+        setTextContent(opt, dsList[i]);
+        ds.appendChild(opt);
+    }
+}
+
+function prepopulate() {
+    var ds = getParameterByName('ds');
+    var ic = getParameterByName('ic');
+    var q = getParameterByName('q');
+    var uid = getParameterByName('uid');
+    var pwd = getParameterByName('pwd');
+    var timeout = getParameterByName('timeout');
+    var rowcount = getParameterByName('rowcount');
+
+    if (ds !== null) v('ds', ds);
+    if (ic !== null) v('ic', ic);
+    if (q !== null) v('query', q);
+    if (uid !== null) {
+        v('uid', uid);
+        if (pwd !== null) v('pwd', pwd);
+
+        find('intsec').checked = false;
+        find('uid').disabled = false;
+        find('pwd').disabled = false;
+    }
+    if (timeout !== null) v('timeout', timeout);
+    if (rowcount !== null) v('rowcount', rowcount);
 }
 
 function executeHighlightedQuery() {
@@ -499,6 +581,10 @@ function showQueryResults(rsp) {
     // Enumerate all results and create tables for them:
     for (var n = 0; n < rsp.results.length; ++n) {
         var resultset = rsp.results[n];
+        tables.appendChild(text(resultset.rows.length + ' row(s)'));
+        if (resultset.rows.length == 0) {
+            continue;
+        }
 
         // Parse the column info:
         var colInfos = new Array(resultset.columns.length);
@@ -509,7 +595,7 @@ function showQueryResults(rsp) {
         var tbl = tables.appendChild(make('table'));
         tbl.classList.add('tblResults');
         tbl.setAttribute('border', '1');
-        setProp(tbl.style, 'width', find('query').clientWidth + ' px');
+        setStyle(tbl, 'width', find('query').clientWidth + ' px');
 
         var tbody = tbl.appendChild(make('tbody'));
 
@@ -521,7 +607,7 @@ function showQueryResults(rsp) {
                 if (showRowNumber) {
                     var thnum = headrow.appendChild(make('th'));
                     setTextContent(thnum, '#');
-                    setProp(thnum.style, 'text-align', 'right');
+                    setStyle(thnum, 'text-align', 'right');
                 }
 
                 for (var i = 0; i < resultset.columns.length; ++i) {
@@ -563,12 +649,12 @@ function showQueryResults(rsp) {
                 // Booleans:
                 if (bt == 'bit') {
                     disp = val ? '1' : '0';
-                    setProp(td.style, 'text-align', 'center');
+                    setStyle(td, 'text-align', 'center');
                 }
 
                 // Right-align numerics:
                 if (bt == 'int' || bt == 'smallint' || bt == 'tinyint') {
-                    setProp(td.style, 'text-align', 'right');
+                    setStyle(td, 'text-align', 'right');
                 }
 
                 // Pre-formatted text columns:
@@ -585,30 +671,6 @@ function showQueryResults(rsp) {
 
     show('tables');
     show('txtMsec');
-}
-
-function prepopulate() {
-    var ds = getParameterByName('ds');
-    var ic = getParameterByName('ic');
-    var q = getParameterByName('q');
-    var uid = getParameterByName('uid');
-    var pwd = getParameterByName('pwd');
-    var timeout = getParameterByName('timeout');
-    var rowcount = getParameterByName('rowcount');
-
-    if (ds !== null) v('ds', ds);
-    if (ic !== null) v('ic', ic);
-    if (q !== null) v('query', q);
-    if (uid !== null) {
-        v('uid', uid);
-        if (pwd !== null) v('pwd', pwd);
-
-        find('intsec').checked = false;
-        find('uid').disabled = false;
-        find('pwd').disabled = false;
-    }
-    if (timeout !== null) v('timeout', timeout);
-    if (rowcount !== null) v('rowcount', rowcount);
 }
 
 function genQueryString() {
@@ -640,17 +702,17 @@ function getSelectedQueryText() {
 function resizeResults() {
     var tables = find('tables');
     var newWidth = window.innerWidth - 32 - find('sidebar').offsetWidth - find('sidebarPlaceholder').offsetWidth;
-    setProp(tables.style, 'width', '' + newWidth + 'px');
+    setStyle(tables, 'width', '' + newWidth + 'px');
     var newHeight = window.innerHeight - 20 - (find('trResults').offsetHeight - tables.offsetHeight) - find('trCmdBar').offsetHeight - find('trQuery').offsetHeight;
-    setProp(tables.style, 'height', '' + newHeight + 'px');
+    setStyle(tables, 'height', '' + newHeight + 'px');
 }
 
 function runQuery(opts) {
     var auid = v('auid');
     var apwd = v('apwd');
 
-    var ds = v('ds');
-    var ic = v('ic');
+    var ds = opts.ds || v('ds');
+    var ic = opts.ic || v('ic') || 'master';
     var intsec = find('intsec').checked;
     var uid = v('uid');
     var pwd = v('pwd');
@@ -692,14 +754,16 @@ function runQuery(opts) {
 
 function find(id) { return document.getElementById(id); }
 function make(tag) { return document.createElement(tag); }
-function setProp(style, prop, value) {
-    if (style.setProperty)
-        style.setProperty(prop, value);
+function text(text) { return document.createTextNode(text); }
+function setStyle(el, prop, value) {
+    if (el.style.setProperty !== undefined)
+        el.style.setProperty(prop, value);
     else
-        style.setAttribute(prop, value);
+        el.style.setAttribute(prop, value);
 }
 
-function hide(id) { setProp(find(id).style, 'display', 'none'); }
+// Alternatively, try `visibility` style.
+function hide(id) { setStyle(find(id), 'display', 'none'); }
 function show(id) {
     var obj = find(id);
 
@@ -711,7 +775,7 @@ function show(id) {
             disp = 'table-cell';
     }
 
-    setProp(obj.style, 'display', disp);
+    setStyle(obj, 'display', disp);
 }
 function toggle(id) {
     var obj = find(id);
@@ -727,11 +791,11 @@ function toggle(id) {
 function v(id, setValue) {
     var el = find(id);
     if (el === null) return null;
-    if (el.valueAsNumber) {
+    if (el.getAttribute('type') == 'number') {
         if (setValue !== undefined)
             el.valueAsNumber = setValue;
         return el.valueAsNumber;
-    } else if (el.value) {
+    } else {
         if (setValue !== undefined)
             el.value = setValue;
         return el.value;
@@ -760,10 +824,18 @@ function getParameterByName(name) {
 }
 
 function bindEvent(target, type, listener) {
-    if (target.addEventListener)
+    if (target.addEventListener !== undefined)
         target.addEventListener(type, listener, false);
     else
         target.attachEvent('on' + type, listener);
+}
+
+function supports_html5_storage() {
+    try {
+        return 'localStorage' in window && window['localStorage'] !== null;
+    } catch (e) {
+        return false;
+    }
 }
 
 var Base64 = {
