@@ -274,7 +274,9 @@ var defaultDsList = ['(local)'];
 
 var getDsList = !supports_html5_storage() ? function () { return defaultDsList; } : function () {
     try {
-        return JSON.parse(localStorage.getItem('sqlui.dsList'));
+        var list = localStorage.getItem('sqlui.dsList');
+        if (!list) return defaultDsList;
+        return JSON.parse(list);
     } catch (e) {
         return defaultDsList;
     }
