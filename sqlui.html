@@ -595,7 +595,7 @@ function showQueryResults(rsp) {
             colInfos[i] = parseColumnInfo(resultset.columns[i]);
 
         // Make the table:
-        var tbl = tables.appendChild(make('table'));
+        var tbl = make('table');
         tbl.classList.add('tblResults');
         tbl.setAttribute('border', '1');
         setStyle(tbl, 'width', find('query').clientWidth + ' px');
@@ -669,7 +669,10 @@ function showQueryResults(rsp) {
                     setTextContent(td, disp);
                 }
             }
-        }
+        } // for (var r)
+
+        // Add the generated table to the DOM:
+        tables.appendChild(tbl);
     }
 
     show('tables');
@@ -705,8 +708,8 @@ function getSelectedQueryText() {
 function resizeResults() {
     var tables = find('tables');
     var newWidth = window.innerWidth - 32 - find('sidebar').offsetWidth - find('sidebarPlaceholder').offsetWidth;
-    setStyle(tables, 'width', '' + newWidth + 'px');
     var newHeight = window.innerHeight - 20 - (find('trResults').offsetHeight - tables.offsetHeight) - find('trCmdBar').offsetHeight - find('trQuery').offsetHeight;
+    setStyle(tables, 'width', '' + newWidth + 'px');
     setStyle(tables, 'height', '' + newHeight + 'px');
 }
 

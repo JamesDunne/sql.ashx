@@ -76,7 +76,7 @@ namespace AdHocQuery
 
             // Set up our default response headers:
             var rsp = context.Response;
-            rsp.Buffer = false;
+            rsp.Buffer = true;
             rsp.TrySkipIisCustomErrors = true;
             rsp.ContentType = "application/json; charset=utf-8";
             rsp.ContentEncoding = Encoding.UTF8;
