@@ -298,9 +298,6 @@ function initApp() {
 
     // Window resize:
     bindEvent(window, 'resize', function (e) { resizeResults(); });
-    // Textarea resize:
-    // NOTE(jsd): Web FAIL. No resize events for textarea in Chrome or FF17.
-    //bindEvent(find('query'), 'resize', function (e) { console.log(e); resizeResults(); });
 
     // Change head repeat checkbox:
     bindEvent(find('chkHeadRepeat'), 'change', function (e) {
@@ -398,6 +395,10 @@ function initApp() {
 
     // Connect:
     bindEvent(find('btnConnect'), 'click', function (e) {
+        var auid = find('auid');
+        var apwd = find('apwd');
+        auid.classList.remove('highlight');
+        apwd.classList.remove('highlight');
         hide('divErrors');
         resizeResults();
 
@@ -714,6 +715,12 @@ function runQuery(opts) {
     var apwd = v('apwd');
 
     var ds = opts.ds || v('ds');
+    find('ds').classList.remove('highlight');
+    if (ds === null || ds.length == 0) {
+        find('ds').classList.add('highlight');
+        return null;
+    }
+
     var ic = opts.ic || v('ic') || 'master';
     var intsec = find('intsec').checked;
     var uid = v('uid');
