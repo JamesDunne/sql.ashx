@@ -21,6 +21,27 @@ body {
     overflow: hidden;
     background-color: #151515 !important;
 }
+dt {
+    display: inline-block;
+    margin: 0;
+    font-family: 'Anonymous Pro', Consolas, 'Courier New', 'Lucida Console', monospace;
+    background-color: black;
+    color: white;
+    border-radius: 2px;
+    padding: 3px 6px;
+}
+dd {
+    display: inline;
+    margin: 0;
+}
+dl {
+    margin: 5px 0 5px 0;
+}
+.code {
+    font-family: 'Anonymous Pro', Consolas, 'Courier New', 'Lucida Console', monospace;
+    border-radius: 2px;
+    padding: 3px 6px;
+}
 ul, ol, li {
     border-spacing: 0px 0px;
     margin: 0;
@@ -141,6 +162,37 @@ td.sepright {
 td.septop {
     border-top: 4px solid transparent;
 }
+
+/* Facebox */
+#facebox_overlay {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+    background-color: white;
+    opacity: 0.15;
+    z-index: 99;
+}
+#facebox {
+    position: absolute;
+    left: 240px;
+    top: 140px;
+    z-index: 100;
+}
+.popup {
+    position: relative;
+    border: 3px solid transparent;
+    border-radius: 5px;
+    box-shadow: 0 0 18px rgba(0,0,0,0.4);
+}
+.shortcuts {
+    width: 640px;
+    padding: 10px 10px 10px 10px;
+    border-radius: 5px;
+    background-color: #262626;
+}
+
 /* NOTE(jsd): More web FAIL. No way for FF to set custom scrollbar. */
 ::-webkit-scrollbar {
     width: 12px;
@@ -226,6 +278,7 @@ td.septop {
                     <div style="float: right">
                         <a id="selflink" href="#" style="display: none" title="Open query in new window" target="_blank">link</a>
                         <button type="button" id="btnLink">Update Link</button>&nbsp;
+                        <button type="button" id="btnHelp">Help</button>
                     </div>
                 </td>
             </tr>
@@ -252,6 +305,48 @@ td.septop {
             </tr>
         </tbody></table></td>
     </tr></tbody></table>
+    <div id="facebox" style="display: none">
+        <div class="popup">
+            <div class="shortcuts">
+                <h2>Keyboard shortcuts</h2>
+                <div>
+                    <dl>
+                        <dt>F5</dt>
+                        <dd>Execute highlighted query</dd>
+                    </dl>
+                    <dl>
+                        <dt>CTRL-1</dt>
+                        <dd>List tables</dd>
+                    </dl>
+                    <dl>
+                        <dt>CTRL-2</dt>
+                        <dd>List functions</dd>
+                    </dl>
+                    <dl>
+                        <dt>CTRL-3</dt>
+                        <dd>List procedures</dd>
+                    </dl>
+                    <dl>
+                        <dt>CTRL-4</dt>
+                        <dd>List functions</dd>
+                    </dl>
+                    <dl>
+                        <dt>CTRL-5</dt>
+                        <dd><span class="code">EXEC sp_helptext '<em>highlighted text</em>'</span> -- Shows object's SQL definition.</dd>
+                    </dl>
+                    <dl>
+                        <dt>CTRL-6</dt>
+                        <dd><span class="code">EXEC sp_columns '<em>highlighted text</em>'</span> -- Shows table/view's columns.</dd>
+                    </dl>
+                    <dl>
+                        <dt>CTRL-0</dt>
+                        <dd><span class="code">SELECT * FROM <em>highlighted text</em></span></dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="facebox_overlay" style="display: none"></div>
 <script type="text/javascript">
 'use strict';
 
@@ -298,6 +393,24 @@ function initApp() {
 
     // Window resize:
     bindEvent(window, 'resize', function (e) { resizeResults(); });
+
+    // Click help button to show facebox:
+    bindEvent(find('btnHelp'), 'click', function (e) {
+        if (find('facebox').style.display !== 'none') {
+            hide('facebox');
+            hide('facebox_overlay');
+        } else {
+            show('facebox_overlay');
+            setStyle(find('facebox'), 'left', '' + ((window.innerWidth / 2) - (640 / 2)).toString() + 'px');
+            show('facebox');
+        }
+    });
+
+    // Click outside facebox to hide:
+    bindEvent(find('facebox_overlay'), 'click', function (e) {
+        hide('facebox');
+        hide('facebox_overlay');
+    });
 
     // Change head repeat checkbox:
     bindEvent(find('chkHeadRepeat'), 'change', function (e) {
@@ -365,16 +478,32 @@ function initApp() {
         var query = null;
         var rowcount = 0;
 
-        if (e.keyCode === '5'.charCodeAt(0)) {
+        if (e.keyCode === '0'.charCodeAt(0)) {
+            // CTRL-0: `SELECT * FROM [...]`
+            query = 'SELECT * FROM ' + highlighted;
+            rowcount = v('rowcount');
+        } else if (e.keyCode === '1'.charCodeAt(0)) {
+            // CTRL-1: List tables
+            query = 'SELECT [name] AS table_name,create_date,modify_date FROM sys.tables ORDER BY [name] ASC';
+            rowcount = 0;
+        } else if (e.keyCode === '2'.charCodeAt(0)) {
+            // CTRL-2: List views
+            query = 'SELECT [name] AS view_name,create_date,modify_date FROM sys.views ORDER BY [name] ASC';
+            rowcount = 0;
+        } else if (e.keyCode === '3'.charCodeAt(0)) {
+            // CTRL-3: List procedures
+            query = 'SELECT [name] AS sproc_name,create_date,modify_date FROM sys.procedures ORDER BY [name] ASC';
+            rowcount = 0;
+        } else if (e.keyCode === '4'.charCodeAt(0)) {
+            // CTRL-4: List functions
+            query = 'SELECT [name] AS function_name,create_date,modify_date FROM sys.objects WHERE [type] IN (\'FN\',\'TF\',\'IF\') ORDER BY [name] ASC';
+            rowcount = 0;
+        } else if (e.keyCode === '5'.charCodeAt(0)) {
             // CTRL-5: sp_helptext;
             query = 'EXEC sp_helptext \'' + highlighted.replace('\'', '\'\'') + '\'';
         } else if (e.keyCode === '6'.charCodeAt(0)) {
             // CTRL-6: sp_columns;
             query = 'EXEC sp_columns \'' + highlighted.replace('\'', '\'\'') + '\'';
-        } else if (e.keyCode === '0'.charCodeAt(0)) {
-            // CTRL-0: SELECT * FROM;
-            query = 'SELECT * FROM ' + highlighted;
-            rowcount = v('rowcount');
         }
 
         if (query === null) return false;
