@@ -167,6 +167,44 @@ td.septop {
     border-top: 4px solid transparent;
 }
 
+/* tabs */
+div.tab-container > div.tab-panel[data-tab-selected] {
+    visibility: visible;
+    border: 1px solid gray;
+    clear: both;
+}
+div.tab-container > div.tab-panel:not([data-tab-selected]) {
+    visibility: collapse;
+}
+div.tab-container > ul.tab-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    float: left;
+}
+div.tab-container > ul.tab-list > li {
+    display: inline-block;
+    text-decoration: none;
+    padding: 4px 6px;
+    border-bottom: none !important;
+    border-radius: 3px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    margin: 0;
+    float: left;
+}
+div.tab-container > ul.tab-list > li[data-tab-selected] {
+    background: #111;
+    border: 1px solid gray;
+}
+div.tab-container > ul.tab-list > li:not([data-tab-selected]) {
+    background: #333;
+    border: 1px solid silver;
+}
+div.tab-container > div.tab-panel {
+    padding: 4px 2px;
+}
+
 /* Facebox */
 #facebox_overlay {
     position: absolute;
@@ -269,45 +307,57 @@ td.septop {
                 </tbody>
             </table>
         </td>
-        <td style="width: 100%"><table border="0" style="width: 100%"><tbody>
-            <tr id="trCmdBar">
-                <td style="height: 28px">
-                    <div style="float: left">
-                        <button type="button" id="btnExecute">Execute</button>&nbsp;
-                        <button type="button" id="btnCancel" disabled="disabled">Cancel</button>&nbsp;
-                        <input type="checkbox" id="chkHeadRepeat" checked="checked" /><label for="chkHeadRepeat">&nbsp;Header repeats every&nbsp;</label>
-                        <input type="number" id="numHeadRepeat" value="20" style="width: 56px; text-align: right" min="10" max="2000" step="10" /><label for="numHeadRepeat">&nbsp;rows</label>&nbsp;
-                        <input type="checkbox" id="chkRowNumbers" checked="checked" /><label for="chkRowNumbers">&nbsp;Show row rumbers</label>
-                    </div>
-                    <div style="float: right">
-                        <a id="selflink" href="#" style="display: none" title="Open query in new window" target="_blank">link</a>
-                        <button type="button" id="btnLink">Update Link</button>&nbsp;
-                        <button type="button" id="btnHelp">Help</button>
-                    </div>
-                </td>
-            </tr>
-            <tr id="trQuery">
-                <td style="height: 160px">
-                    <textarea name="query" id="query" style="width: 100%; height: 100%; word-wrap: normal; overflow: auto; resize: none" autofocus="autofocus" spellcheck="false">SELECT 1</textarea>
-                </td>
-            </tr>
-            <tr id="trResults">
-                <td style="min-height: 24px">
-                    <div style="clear: both; overflow-y: auto">
-                        <div id="divErrors" style="display: none; overflow-x: auto">
-                            <h3>Errors</h3>
-                            <ul id="ulErrors"></ul>
-                        </div>
-                        <div style="float: right">
-                            <span id="txtMsec"></span>
-                        </div>
-                        <h3>Results</h3>
-                        <div style="clear: both"></div>
-                        <div id="tables" style="overflow-x: auto"></div>
-                    </div>
-                </td>
-            </tr>
-        </tbody></table></td>
+        <td style="width: 100%">
+            <div id="query-tabs" class="tab-container">
+                <ul id="query-tabs-list" class="tab-list">
+                    <li data-tab-id="1" data-tab-selected="true">Query 1</li>
+                    <li data-tab-id="2">Query 2</li>
+                    <li data-tab-id="2">Query 3</li>
+                    <li data-tab-id="2">Query 4</li>
+                </ul>
+                <div class="tab-panel" data-tab-id="1" data-tab-selected="true">
+                    <table border="0" style="width: 100%"><tbody>
+                        <tr id="trCmdBar">
+                            <td style="height: 28px">
+                                <div style="float: left">
+                                    <button type="button" id="btnExecute">Execute</button>&nbsp;
+                                    <button type="button" id="btnCancel" disabled="disabled">Cancel</button>&nbsp;
+                                    <input type="checkbox" id="chkHeadRepeat" checked="checked" /><label for="chkHeadRepeat">&nbsp;Header repeats every&nbsp;</label>
+                                    <input type="number" id="numHeadRepeat" value="20" style="width: 56px; text-align: right" min="10" max="2000" step="10" /><label for="numHeadRepeat">&nbsp;rows</label>&nbsp;
+                                    <input type="checkbox" id="chkRowNumbers" checked="checked" /><label for="chkRowNumbers">&nbsp;Show row rumbers</label>
+                                </div>
+                                <div style="float: right">
+                                    <a id="selflink" href="#" style="display: none" title="Open query in new window" target="_blank">link</a>
+                                    <button type="button" id="btnLink">Update Link</button>&nbsp;
+                                    <button type="button" id="btnHelp">Help</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr id="trQuery">
+                            <td style="height: 160px">
+                                <textarea name="query" id="query" style="width: 100%; height: 100%; word-wrap: normal; overflow: auto; resize: none" autofocus="autofocus" spellcheck="false">SELECT 1</textarea>
+                            </td>
+                        </tr>
+                        <tr id="trResults">
+                            <td style="min-height: 24px">
+                                <div style="clear: both; overflow-y: auto">
+                                    <div id="divErrors" style="display: none; overflow-x: auto">
+                                        <h3>Errors</h3>
+                                        <ul id="ulErrors"></ul>
+                                    </div>
+                                    <div style="float: right">
+                                        <span id="txtMsec"></span>
+                                    </div>
+                                    <h3>Results</h3>
+                                    <div style="clear: both"></div>
+                                    <div id="tables" style="overflow-x: auto"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody></table>
+                </div>
+            </div>
+        </td>
     </tr></tbody></table>
     <div id="facebox" style="display: none">
         <div class="popup">
@@ -917,7 +967,7 @@ function getSelectedQueryText() {
 function resizeResults() {
     var tables = find('tables');
     var newWidth = getDeviceWidth() - 32 - find('sidebar').offsetWidth - find('sidebarPlaceholder').offsetWidth;
-    var newHeight = getDeviceHeight() - 20 - (find('trResults').offsetHeight - tables.offsetHeight) - find('trCmdBar').offsetHeight - find('trQuery').offsetHeight;
+    var newHeight = getDeviceHeight() - 20 - find('query-tabs-list').offsetHeight - (find('trResults').offsetHeight - tables.offsetHeight) - find('trCmdBar').offsetHeight - find('trQuery').offsetHeight;
     setStyle(tables, 'width', '' + newWidth + 'px');
     setStyle(tables, 'height', '' + newHeight + 'px');
 }
