@@ -898,6 +898,8 @@ function showQueryResults(rsp) {
 
     show('tables');
     show('txtMsec');
+    // Move input focus to query textarea:
+    find('query').focus();
 }
 
 function getSelectedQueryText() {
@@ -1016,9 +1018,14 @@ function v(id, setValue) {
         try {
             if (setValue !== undefined)
                 el.valueAsNumber = setValue;
+            if (isNaN(el.valueAsNumber))
+                return el.value;
             return el.valueAsNumber;
         } catch (e) {
-            // default to using `value` below.
+            // default to using `value`:
+            if (setValue !== undefined)
+                el.value = setValue;
+            return el.value;
         }
     }
 
