@@ -935,15 +935,21 @@ function toggle(id) {
 function v(id, setValue) {
     var el = find(id);
     if (el === null) return null;
-    if (el.getAttribute('type') == 'number') {
-        if (setValue !== undefined)
-            el.valueAsNumber = setValue;
-        return el.valueAsNumber;
-    } else {
-        if (setValue !== undefined)
-            el.value = setValue;
-        return el.value;
+
+    // NOTE(jsd): The try/catch is for FF failure.
+    try {
+        if (el.getAttribute('type') == 'number') {
+            if (setValue !== undefined)
+                el.valueAsNumber = setValue;
+            return el.valueAsNumber;
+        }
+    } catch (e) {
+        // default to using `value` below.
     }
+
+    if (setValue !== undefined)
+        el.value = setValue;
+    return el.value;
 }
 
 function clearAllChildren(el) {
