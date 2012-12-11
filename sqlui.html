@@ -589,6 +589,30 @@ function loadDataSources(dsList) {
     }
 }
 
+function tryParseInt(i) {
+    try {
+        return parseInt(i);
+    } catch (e) {
+        return null;
+    }
+}
+
+function genQueryString() {
+    var s =
+        'ds=' + encodeURIComponent(v('ds')) +
+        '&ic=' + encodeURIComponent(v('ic')) +
+        '&timeout=' + encodeURIComponent(v('timeout')) +
+        '&rowcount=' + encodeURIComponent(v('rowcount')) +
+        '&rownumbers=' + encodeURIComponent(find('chkRowNumbers').checked ? '1' : '0') +
+        '&headrepeat=' + encodeURIComponent(find('chkHeadRepeat').checked ? v('numHeadRepeat') : '0') +
+        (find('intsec').checked ? '' : (
+            '&uid=' + encodeURIComponent(v('uid')) +
+            '&pwd=' + encodeURIComponent(v('pwd'))
+        )) +
+        '&q=' + encodeURIComponent(v('query'));
+    return s;
+}
+
 function prepopulate() {
     var ds = getParameterByName('ds');
     var ic = getParameterByName('ic');
@@ -597,6 +621,8 @@ function prepopulate() {
     var pwd = getParameterByName('pwd');
     var timeout = getParameterByName('timeout');
     var rowcount = getParameterByName('rowcount');
+    var rownumbers = getParameterByName('rownumbers');
+    var headrepeat = getParameterByName('headrepeat');
 
     if (ds !== null) v('ds', ds);
     if (ic !== null) v('ic', ic);
@@ -611,6 +637,26 @@ function prepopulate() {
     }
     if (timeout !== null) v('timeout', timeout);
     if (rowcount !== null) v('rowcount', rowcount);
+
+    if (headrepeat !== null) {
+        var rpt = tryParseInt(headrepeat);
+        if (rpt !== null) {
+            if (rpt !== 0) {
+                find('chkHeadRepeat').setAttribute('checked', 'checked');
+                v('numHeadRepeat', rpt);
+            } else {
+                find('chkHeadRepeat').removeAttribute('checked');
+            }
+        }
+    }
+    if (rownumbers !== null) {
+        var num = tryParseInt(rownumbers);
+        if (!!num && num !== 0) {
+            find('chkRowNumbers').setAttribute('checked', 'checked');
+        } else {
+            find('chkRowNumbers').removeAttribute('checked');
+        }
+    }
 }
 
 function executeHighlightedQuery() {
@@ -806,20 +852,6 @@ function showQueryResults(rsp) {
 
     show('tables');
     show('txtMsec');
-}
-
-function genQueryString() {
-    var s = 'ds=' +
-        encodeURIComponent(v('ds')) +
-        '&ic=' + encodeURIComponent(v('ic')) +
-        '&timeout=' + encodeURIComponent(v('timeout')) +
-        '&rowcount=' + encodeURIComponent(v('rowcount')) +
-        (find('intsec').checked ? '' : (
-            '&uid=' + encodeURIComponent(v('uid')) +
-            '&pwd=' + encodeURIComponent(v('pwd'))
-        )) +
-        '&q=' + encodeURIComponent(v('query'));
-    return s;
 }
 
 function getSelectedQueryText() {
