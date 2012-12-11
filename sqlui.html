@@ -3,6 +3,7 @@
 <html>
 <head>
     <title>SQL Query</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style type="text/css">
 /* Full page mode */
 html,body {
@@ -387,6 +388,9 @@ var setDsList = !supports_html5_storage() ? function () { } : function (dsList) 
 var queryXhr = null;
 
 function initApp() {
+    getDeviceWidth();
+    getDeviceHeight();
+
     // Load and populate the dataSources <datalist>:
     var dsList = getDsList();
     loadDataSources(dsList);
@@ -404,7 +408,7 @@ function initApp() {
             hide('facebox_overlay');
         } else {
             show('facebox_overlay');
-            setStyle(find('facebox'), 'left', '' + ((window.innerWidth / 2) - (640 / 2)).toString() + 'px');
+            setStyle(find('facebox'), 'left', '' + ((getDeviceWidth() / 2) - (640 / 2)).toString() + 'px');
             show('facebox');
         }
     });
@@ -417,7 +421,7 @@ function initApp() {
 
     // Change head repeat checkbox:
     bindEvent(find('chkHeadRepeat'), 'change', function (e) {
-        if (find('chkHeadRepeat').checked) {
+        if (v('chkHeadRepeat')) {
             find('numHeadRepeat').disabled = false;
         } else {
             find('numHeadRepeat').disabled = true;
@@ -445,7 +449,7 @@ function initApp() {
 
     // Update UI on "Integrated Security" checkbox change:
     bindEvent(find('intsec'), 'change', function (e) {
-        var intsec = find('intsec').checked;
+        var intsec = v('intsec');
         find('uid').disabled = intsec;
         find('pwd').disabled = intsec;
     });
@@ -603,9 +607,9 @@ function genQueryString() {
         '&ic=' + encodeURIComponent(v('ic')) +
         '&timeout=' + encodeURIComponent(v('timeout')) +
         '&rowcount=' + encodeURIComponent(v('rowcount')) +
-        '&rownumbers=' + encodeURIComponent(find('chkRowNumbers').checked ? '1' : '0') +
-        '&headrepeat=' + encodeURIComponent(find('chkHeadRepeat').checked ? v('numHeadRepeat') : '0') +
-        (find('intsec').checked ? '' : (
+        '&rownumbers=' + encodeURIComponent(v('chkRowNumbers') ? '1' : '0') +
+        '&headrepeat=' + encodeURIComponent(v('chkHeadRepeat') ? v('numHeadRepeat') : '0') +
+        (v('intsec') ? '' : (
             '&uid=' + encodeURIComponent(v('uid')) +
             '&pwd=' + encodeURIComponent(v('pwd'))
         )) +
@@ -631,7 +635,7 @@ function prepopulate() {
         v('uid', uid);
         if (pwd !== null) v('pwd', pwd);
 
-        find('intsec').checked = false;
+        v('intsec', false);
         find('uid').disabled = false;
         find('pwd').disabled = false;
     }
@@ -642,20 +646,16 @@ function prepopulate() {
         var rpt = tryParseInt(headrepeat);
         if (rpt !== null) {
             if (rpt !== 0) {
-                find('chkHeadRepeat').setAttribute('checked', 'checked');
+                v('chkHeadRepeat', true);
                 v('numHeadRepeat', rpt);
             } else {
-                find('chkHeadRepeat').removeAttribute('checked');
+                v('chkHeadRepeat', false);
             }
         }
     }
     if (rownumbers !== null) {
         var num = tryParseInt(rownumbers);
-        if (!!num && num !== 0) {
-            find('chkRowNumbers').setAttribute('checked', 'checked');
-        } else {
-            find('chkRowNumbers').removeAttribute('checked');
-        }
+        v('chkRowNumbers', (!!num && num !== 0));
     }
 }
 
@@ -747,9 +747,9 @@ function showQueryResults(rsp) {
     var tables = find('tables');
     clearAllChildren(tables);
 
-    var repeatHead = find('chkHeadRepeat').checked;
+    var repeatHead = v('chkHeadRepeat');
     var repeatHeadEvery = v('numHeadRepeat');
-    var showRowNumber = find('chkRowNumbers').checked;
+    var showRowNumber = v('chkRowNumbers');
 
     // Display timing:
     if (rsp.timing) {
@@ -868,8 +868,8 @@ function getSelectedQueryText() {
 
 function resizeResults() {
     var tables = find('tables');
-    var newWidth = window.innerWidth - 32 - find('sidebar').offsetWidth - find('sidebarPlaceholder').offsetWidth;
-    var newHeight = window.innerHeight - 20 - (find('trResults').offsetHeight - tables.offsetHeight) - find('trCmdBar').offsetHeight - find('trQuery').offsetHeight;
+    var newWidth = getDeviceWidth() - 32 - find('sidebar').offsetWidth - find('sidebarPlaceholder').offsetWidth;
+    var newHeight = getDeviceHeight() - 20 - (find('trResults').offsetHeight - tables.offsetHeight) - find('trCmdBar').offsetHeight - find('trQuery').offsetHeight;
     setStyle(tables, 'width', '' + newWidth + 'px');
     setStyle(tables, 'height', '' + newHeight + 'px');
 }
@@ -886,7 +886,7 @@ function runQuery(opts) {
     }
 
     var ic = opts.ic || v('ic') || 'master';
-    var intsec = find('intsec').checked;
+    var intsec = v('intsec');
     var uid = v('uid');
     var pwd = v('pwd');
 
@@ -966,14 +966,25 @@ function v(id, setValue) {
     if (el === null) return null;
 
     // NOTE(jsd): The try/catch is for FF failure.
-    try {
-        if (el.getAttribute('type') == 'number') {
+    if (el.getAttribute('type') === 'number') {
+        try {
             if (setValue !== undefined)
                 el.valueAsNumber = setValue;
             return el.valueAsNumber;
+        } catch (e) {
+            // default to using `value` below.
         }
-    } catch (e) {
-        // default to using `value` below.
+    }
+
+    // Support for checkboxes with true/false values for checked/unchecked:
+    if (el.getAttribute('type') === 'checkbox') {
+        if (setValue !== undefined) {
+            if (!!setValue)
+                el.setAttribute('checked', 'checked');
+            else
+                el.removeAttribute('checked');
+        }
+        return el.checked;
     }
 
     if (setValue !== undefined)
@@ -1015,6 +1026,24 @@ function supports_html5_storage() {
     } catch (e) {
         return false;
     }
+}
+
+function getDeviceWidth() {
+    var w = null;
+    return (function () {
+        if (w === null)
+            w = window.innerWidth;
+        return w;
+    })();
+}
+
+function getDeviceHeight() {
+    var h = null;
+    return (function () {
+        if (h === null)
+            h = window.innerHeight;
+        return h;
+    })();
 }
 
 var Base64 = {
