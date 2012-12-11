@@ -468,8 +468,8 @@ function initApp() {
         show('selflink');
     });
 
-    // textarea keyboard shortcuts:
-    bindEvent(find('query'), 'keydown', function (e) {
+    // whole-page keyboard shorcuts:
+    bindEvent(document.body, 'keydown', function (e) {
         if (!e.ctrlKey) {
             if (e.keyCode === 116) {
                 // e.keyIdentifier == "F5"
@@ -481,15 +481,12 @@ function initApp() {
             return false;
         }
 
-        var highlighted = getSelectedQueryText();
-        var query = null;
-        var rowcount = 0;   // unlimited
+        // Pick text out from the user's selection in the browser (e.g. for selecting data from query results)
+        var highlighted = getBrowserSelectedText();
 
-        if (e.keyCode === '0'.charCodeAt(0)) {
-            // CTRL-0: `SELECT * FROM [...]`
-            query = 'SELECT * FROM ' + highlighted;
-            rowcount = v('rowcount');
-        } else if (e.keyCode === '1'.charCodeAt(0)) {
+        var query = null;
+
+        if (e.keyCode === '1'.charCodeAt(0)) {
             // CTRL-1: List tables
             query = 'SELECT [name] AS table_name,create_date,modify_date FROM sys.tables ORDER BY [name] ASC';
         } else if (e.keyCode === '2'.charCodeAt(0)) {
@@ -501,6 +498,55 @@ function initApp() {
         } else if (e.keyCode === '4'.charCodeAt(0)) {
             // CTRL-4: List functions
             query = 'SELECT [name] AS function_name,create_date,modify_date FROM sys.objects WHERE [type] IN (\'FN\',\'TF\',\'IF\') ORDER BY [name] ASC';
+        } else if (e.keyCode === '5'.charCodeAt(0)) {
+            // CTRL-5: sp_helptext;
+            if (!highlighted) {
+                // A highlighted word is required.
+                e.preventDefault();
+                return true;
+            }
+            query = 'EXEC sp_helptext \'' + highlighted.replace('\'', '\'\'') + '\'';
+        } else if (e.keyCode === '6'.charCodeAt(0)) {
+            // CTRL-6: sp_columns;
+            if (!highlighted) {
+                // A highlighted word is required.
+                e.preventDefault();
+                return true;
+            }
+            query = 'EXEC sp_columns \'' + highlighted.replace('\'', '\'\'') + '\'';
+        } else {
+            return false;
+        }
+
+        // Stop the browser from responding to the keystroke:
+        e.preventDefault();
+
+        queryXhr = runQuery({
+            query: query,
+            rowcount: 0,
+            before: showQueryResultsBefore,
+            after: showQueryResultsAfter,
+            error: showQueryResultsError,
+            success: showQueryResults
+        });
+
+        return true;
+    });
+
+    // textarea keyboard shortcuts:
+    bindEvent(find('query'), 'keydown', function (e) {
+        if (!e.ctrlKey) {
+            return false;
+        }
+
+        var highlighted = getSelectedQueryText();
+        var query = null;
+        var rowcount = 0;   // unlimited
+
+        if (e.keyCode === '0'.charCodeAt(0)) {
+            // CTRL-0: `SELECT * FROM [...]`
+            query = 'SELECT * FROM ' + highlighted;
+            rowcount = v('rowcount');
         } else if (e.keyCode === '5'.charCodeAt(0)) {
             // CTRL-5: sp_helptext;
             query = 'EXEC sp_helptext \'' + highlighted.replace('\'', '\'\'') + '\'';
@@ -965,8 +1011,8 @@ function v(id, setValue) {
     var el = find(id);
     if (el === null) return null;
 
-    // NOTE(jsd): The try/catch is for FF failure.
     if (el.getAttribute('type') === 'number') {
+        // NOTE(jsd): The try/catch is for FF failure.
         try {
             if (setValue !== undefined)
                 el.valueAsNumber = setValue;
@@ -1044,6 +1090,15 @@ function getDeviceHeight() {
             h = window.innerHeight;
         return h;
     })();
+}
+
+function getBrowserSelectedText() {
+    try {
+        // Works for Chrome. Might need more hacks for non-Chrome.
+        return window.getSelection().getRangeAt(0).toString();
+    } catch (e) {
+        return null;
+    }
 }
 
 var Base64 = {
