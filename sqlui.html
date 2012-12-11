@@ -470,8 +470,8 @@ function initApp() {
             if (e.keyCode === 116) {
                 // e.keyIdentifier == "F5"
                 // F5 - execute query
-                executeHighlightedQuery();
                 e.preventDefault();
+                executeHighlightedQuery();
                 return true;
             }
             return false;
@@ -479,7 +479,7 @@ function initApp() {
 
         var highlighted = getSelectedQueryText();
         var query = null;
-        var rowcount = 0;
+        var rowcount = 0;   // unlimited
 
         if (e.keyCode === '0'.charCodeAt(0)) {
             // CTRL-0: `SELECT * FROM [...]`
@@ -488,19 +488,15 @@ function initApp() {
         } else if (e.keyCode === '1'.charCodeAt(0)) {
             // CTRL-1: List tables
             query = 'SELECT [name] AS table_name,create_date,modify_date FROM sys.tables ORDER BY [name] ASC';
-            rowcount = 0;
         } else if (e.keyCode === '2'.charCodeAt(0)) {
             // CTRL-2: List views
             query = 'SELECT [name] AS view_name,create_date,modify_date FROM sys.views ORDER BY [name] ASC';
-            rowcount = 0;
         } else if (e.keyCode === '3'.charCodeAt(0)) {
             // CTRL-3: List procedures
             query = 'SELECT [name] AS sproc_name,create_date,modify_date FROM sys.procedures ORDER BY [name] ASC';
-            rowcount = 0;
         } else if (e.keyCode === '4'.charCodeAt(0)) {
             // CTRL-4: List functions
             query = 'SELECT [name] AS function_name,create_date,modify_date FROM sys.objects WHERE [type] IN (\'FN\',\'TF\',\'IF\') ORDER BY [name] ASC';
-            rowcount = 0;
         } else if (e.keyCode === '5'.charCodeAt(0)) {
             // CTRL-5: sp_helptext;
             query = 'EXEC sp_helptext \'' + highlighted.replace('\'', '\'\'') + '\'';
@@ -511,6 +507,9 @@ function initApp() {
 
         if (query === null) return false;
 
+        // Stop the browser from responding to the keystroke:
+        e.preventDefault();
+
         queryXhr = runQuery({
             query: query,
             rowcount: rowcount,
@@ -520,8 +519,6 @@ function initApp() {
             success: showQueryResults
         });
 
-        // Stop the browser from responding to the keystroke:
-        e.preventDefault();
         return true;
     });
 
