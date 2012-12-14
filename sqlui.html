@@ -105,21 +105,20 @@ textarea {
     background-color: #101010;
     color: #bbb;
 }
-td.sidebar-label {
-    white-space: nowrap;
+.mid {
     vertical-align: middle;
 }
 .nowrap {
     white-space: nowrap;
 }
 input.sidebar {
-    width: 240px;
+    width: 180px;
 }
 input.sidebar-ds {
     width: 208px
 }
 select.sidebar {
-    width: 240px;
+    width: 200px;
 }
 input.sidebar-half {
     width: 100px;
@@ -160,12 +159,6 @@ td.rownum {
     padding-right: 2px;
     padding-left: 2px;
 }
-td.sepright {
-    border-right: 4px solid transparent;
-}
-td.septop {
-    border-top: 4px solid transparent;
-}
 
 /* tabs */
 div.tab-container > div.tab-panel[data-tab-selected] {
@@ -202,7 +195,7 @@ div.tab-container > ul.tab-list > li:not([data-tab-selected]) {
     border: 1px solid silver;
 }
 div.tab-container > div.tab-panel {
-    padding: 4px 2px;
+    padding: 4px 4px;
 }
 
 /* Facebox */
@@ -255,110 +248,76 @@ div.tab-container > div.tab-panel {
     </style>
 </head>
 <body>
-    <table border="0" style="width: 100%" class="padded"><tbody><tr>
-        <td class="sepright">
-            <div id="divBtnSidebar" style="position: absolute; left: 324px">
-                <button type="button" id="btnSidebar" title="Hide sidebar">&lt;</button>
-            </div>
-            <div id="sidebarPlaceholder" style="display: none; width: 16px; height: 100%"></div>
-            <table id="sidebar" border="0">
-                <tbody>
+    <div style="width: 100%" class="padded">
+        <table id="toppanel" style="width: 100%" border="0"><tbody>
+            <tr>
+                <td class="nowrap mid">User:</td>
+                <td class="nowrap"><div>
+                    <input id="auid" class="sidebar-half" type="text" value="username" title="Username" placeholder="username" />&nbsp;
+                    <input id="apwd" class="sidebar-half" type="password" value="password" title="Password" placeholder="password" />
+                </div></td>
+                <td style="float: right">
+                    <button type="button" id="btnHelp">Help</button>
+                </td>
+            </tr>
+        </tbody></table>
+
+        <div id="query-tabs" class="tab-container">
+            <ul id="query-tabs-list" class="tab-list">
+                <li data-tab-id="1" data-tab-selected="true">Query 1</li>
+                <li data-tab-id="2">Query 2</li>
+                <li data-tab-id="3">Query 3</li>
+                <li data-tab-id="4">Query 4</li>
+            </ul>
+            <div class="tab-panel" data-tab-id="1" data-tab-selected="true">
+                <table id="commandBar" border="0" style="width: 100%"><tbody>
                     <tr>
-                        <td class="sidebar-label">User:</td>
-                        <td class="sidebar-label"><div>
-                            <input id="auid" class="sidebar-half" type="text" value="username" title="Username" placeholder="username" />&nbsp;
-                            <input id="apwd" class="sidebar-half" type="password" value="password" title="Password" placeholder="password" />
-                        </div></td>
-                    </tr>
-                    <tr><td colspan="2" class="septop"></td></tr>
-                    <tr><td colspan="2"><strong>Connection String:</strong></td></tr>
-                    <tr>
-                        <td style="padding-top: 5px">&nbsp;</td>
-                        <td style="padding-top: 5px"><input id="intsec" type="checkbox" checked="checked"/>&nbsp;<label for="intsec">Integrated Security</label></td>
-                    </tr>
-                    <tr>
-                        <td class="sidebar-label">User ID:</td>
-                        <td><input id="uid" class="sidebar" type="text" value="" disabled="disabled" placeholder="user ID" title="Connection String User ID" /></td>
-                    </tr>
-                    <tr>
-                        <td class="sidebar-label">Password:</td>
-                        <td><input id="pwd" class="sidebar" type="password" value="" disabled="disabled" placeholder="password" title="Connection String Password" /></td>
-                    </tr>
-                    <tr><td colspan="2" class="septop"></td></tr>
-                    <tr>
-                        <td class="sidebar-label">Data Source:</td>
-                        <td><input id="ds" class="sidebar-ds" type="text" list="dataSources" placeholder="(server)\(instance)" title="Connection String Data Source" /><datalist id="dataSources"></datalist>&nbsp;<button id="btnConnect" type="button" title="Click to fetch catalog list">&hellip;</button></td>
+                        <td class="nowrap mid"><input id="intsec" type="checkbox" checked="checked"/>&nbsp;<label for="intsec">Integrated Security</label></td>
+                        <td class="nowrap mid"><input id="uid" class="sidebar" type="text" value="" disabled="disabled" placeholder="user ID" title="Connection String User ID" /></td>
+                        <td class="nowrap mid"><input id="pwd" class="sidebar" type="password" value="" disabled="disabled" placeholder="password" title="Connection String Password" /></td>
+                        <td class="nowrap mid"><label for="timeout">Timeout:&nbsp;<input id="timeout" class="sidebar" type="number" value="30" min="0" max="900" step="10" style="width: 64px; text-align: right" title="Number of seconds to wait for command execution" /></label></td>
+                        <td class="nowrap mid"><label for="rowcount">Row Count:&nbsp;<input id="rowcount" class="sidebar" type="number" value="100" min="0" max="50000" step="10" style="width: 64px; text-align: right" title="Limit number of rows (0 for unlimited)" /></label></td>
+                        <td class="nowrap mid" style="float: right"><button type="button" id="btnLink">Update Link</button></td>
                     </tr>
                     <tr>
-                        <td class="sidebar-label septop">Initial Catalog:</td>
-                        <td class="septop"><input id="ic" class="sidebar" type="text" list="catalogs" placeholder="catalog" title="Connection String Initial Catalog (click '&hellip;' button above to refresh list)"/>
+                        <td class="nowrap mid"><input id="ds" class="sidebar-ds" type="text" list="dataSources" placeholder="(server)\(instance)" title="Connection String Data Source" /><datalist id="dataSources"></datalist>&nbsp;<button id="btnConnect" type="button" title="Click to fetch catalog list">&hellip;</button></td>
+                        <td class="nowrap mid"><input id="ic" class="sidebar" type="text" list="catalogs" placeholder="catalog" title="Connection String Initial Catalog (click '&hellip;' button above to refresh list)"/>
                             <datalist id="catalogs"></datalist>
                         </td>
+                        <td class="nowrap mid" style="height: 28px">
+                            <button type="button" id="btnExecute">Execute</button>&nbsp;
+                            <button type="button" id="btnCancel" disabled="disabled">Cancel</button>&nbsp;
+                        </td>
+                        <td class="nowrap mid">
+                            <input type="checkbox" id="chkHeadRepeat" checked="checked" /><label for="chkHeadRepeat">&nbsp;Header repeats every&nbsp;</label>
+                            <input type="number" id="numHeadRepeat" value="20" style="width: 56px; text-align: right" min="10" max="2000" step="10" /><label for="numHeadRepeat">&nbsp;rows</label>
+                        </td>
+                        <td class="nowrap mid">
+                            <input type="checkbox" id="chkRowNumbers" checked="checked" /><label for="chkRowNumbers">&nbsp;Show row rumbers</label>
+                        </td>
+                        <td class="nowrap mid" style="float: right"><a id="selflink" href="#" style="display: none" title="Open query in new window" target="_blank">link</a></td>
                     </tr>
-                    <tr>
-                        <td class="sidebar-label septop">Timeout:</td>
-                        <td class="septop"><input id="timeout" class="sidebar" type="number" value="30" min="0" max="900" step="10" style="width: 64px; text-align: right" title="Number of seconds to wait for command execution" /></td>
-                    </tr>
-                    <tr><td colspan="2" class="septop"></td></tr>
-                    <tr>
-                        <td class="sidebar-label">Row Count:</td>
-                        <td><input id="rowcount" class="sidebar" type="number" value="100" min="0" max="50000" step="10" style="width: 64px; text-align: right" title="Limit number of rows (0 for unlimited)" /></td>
-                    </tr>
-                </tbody>
-            </table>
-        </td>
-        <td style="width: 100%">
-            <div id="query-tabs" class="tab-container">
-                <ul id="query-tabs-list" class="tab-list">
-                    <li data-tab-id="1" data-tab-selected="true">Query 1</li>
-                    <li data-tab-id="2">Query 2</li>
-                    <li data-tab-id="3">Query 3</li>
-                    <li data-tab-id="4">Query 4</li>
-                </ul>
-                <div class="tab-panel" data-tab-id="1" data-tab-selected="true">
-                    <table border="0" style="width: 100%"><tbody>
-                        <tr id="trCmdBar">
-                            <td style="height: 28px">
-                                <div style="float: left">
-                                    <button type="button" id="btnExecute">Execute</button>&nbsp;
-                                    <button type="button" id="btnCancel" disabled="disabled">Cancel</button>&nbsp;
-                                    <input type="checkbox" id="chkHeadRepeat" checked="checked" /><label for="chkHeadRepeat">&nbsp;Header repeats every&nbsp;</label>
-                                    <input type="number" id="numHeadRepeat" value="20" style="width: 56px; text-align: right" min="10" max="2000" step="10" /><label for="numHeadRepeat">&nbsp;rows</label>&nbsp;
-                                    <input type="checkbox" id="chkRowNumbers" checked="checked" /><label for="chkRowNumbers">&nbsp;Show row rumbers</label>
-                                </div>
-                                <div style="float: right">
-                                    <a id="selflink" href="#" style="display: none" title="Open query in new window" target="_blank">link</a>
-                                    <button type="button" id="btnLink">Update Link</button>&nbsp;
-                                    <button type="button" id="btnHelp">Help</button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr id="trQuery">
-                            <td style="height: 160px">
-                                <textarea name="query" id="query" style="width: 100%; height: 100%; word-wrap: normal; overflow: auto; resize: none" autofocus="autofocus" spellcheck="false">SELECT 1</textarea>
-                            </td>
-                        </tr>
-                        <tr id="trResults">
-                            <td style="min-height: 24px">
-                                <div style="clear: both; overflow-y: auto">
-                                    <div id="divErrors" style="display: none; overflow-x: auto">
-                                        <h3>Errors</h3>
-                                        <ul id="ulErrors"></ul>
-                                    </div>
-                                    <div style="float: right">
-                                        <span id="txtMsec"></span>
-                                    </div>
-                                    <h3>Results</h3>
-                                    <div style="clear: both"></div>
-                                    <div id="tables" style="overflow-x: auto"></div>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody></table>
+                </tbody></table>
+                <div id="trQuery" style="height: 160px">
+                    <textarea name="query" id="query" style="width: 100%; height: 100%; word-wrap: normal; overflow: auto; resize: none" autofocus="autofocus" spellcheck="false">SELECT 1</textarea>
+                </div>
+                <div id="trResults" style="min-height: 24px">
+                    <div style="clear: both; overflow-y: auto">
+                        <div id="divErrors" style="display: none; overflow-x: auto">
+                            <h3>Errors</h3>
+                            <ul id="ulErrors"></ul>
+                        </div>
+                        <div style="float: right">
+                            <span id="txtMsec"></span>
+                        </div>
+                        <h3>Results</h3>
+                        <div style="clear: both"></div>
+                        <div id="tables" style="overflow-x: auto"></div>
+                    </div>
                 </div>
             </div>
-        </td>
-    </tr></tbody></table>
+        </div>
+    </div>
     <div id="facebox" style="display: none">
         <div class="popup">
             <div class="shortcuts">
@@ -476,25 +435,6 @@ function initApp() {
         } else {
             find('numHeadRepeat').disabled = true;
         }
-    });
-
-    // Show/hide sidebar:
-    bindEvent(find('btnSidebar'), 'click', function (e) {
-        if (toggle('sidebar')) {
-            hide('sidebarPlaceholder');
-            setStyle(find('divBtnSidebar'), 'left', '324px');
-            var btn = find('btnSidebar');
-            btn.setAttribute('title', 'Hide sidebar');
-            setTextContent(btn, '<');
-        } else {
-            setStyle(find('divBtnSidebar'), 'left', '8px');
-            var btn = find('btnSidebar');
-            btn.setAttribute('title', 'Show sidebar');
-            setTextContent(btn, '>');
-            show('sidebarPlaceholder');
-        }
-        // Resize the result grid:
-        resizeResults();
     });
 
     // Update UI on "Integrated Security" checkbox change:
@@ -966,8 +906,8 @@ function getSelectedQueryText() {
 
 function resizeResults() {
     var tables = find('tables');
-    var newWidth = getDeviceWidth() - 32 - find('sidebar').offsetWidth - find('sidebarPlaceholder').offsetWidth;
-    var newHeight = getDeviceHeight() - 20 - find('query-tabs-list').offsetHeight - (find('trResults').offsetHeight - tables.offsetHeight) - find('trCmdBar').offsetHeight - find('trQuery').offsetHeight;
+    var newWidth = getDeviceWidth() - 8 - 32;
+    var newHeight = getDeviceHeight() - 24 - find('query-tabs-list').offsetHeight - (find('trResults').offsetHeight - tables.offsetHeight) - find('commandBar').offsetHeight - find('toppanel').offsetHeight - find('trQuery').offsetHeight;
     setStyle(tables, 'width', '' + newWidth + 'px');
     setStyle(tables, 'height', '' + newHeight + 'px');
 }
