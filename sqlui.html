@@ -161,23 +161,18 @@ td.rownum {
 }
 
 /* tabs */
-div.tab-container > div.tab-panel[data-tab-selected] {
-    visibility: visible;
-    border: 1px solid gray;
-    clear: both;
-}
-div.tab-container > div.tab-panel:not([data-tab-selected]) {
-    visibility: collapse;
-}
 div.tab-container > ul.tab-list {
     margin: 0;
     padding: 0;
     list-style: none;
     float: left;
+    user-select: none;
+    -webkit-user-select: none;
 }
 div.tab-container > ul.tab-list > li {
     display: inline-block;
     text-decoration: none;
+    cursor: pointer;
     padding: 4px 6px;
     border-bottom: none !important;
     border-radius: 3px;
@@ -195,6 +190,8 @@ div.tab-container > ul.tab-list > li:not([data-tab-selected]) {
     border: 1px solid silver;
 }
 div.tab-container > div.tab-panel {
+    border: 1px solid gray;
+    clear: both;
     padding: 4px 4px;
 }
 
@@ -253,8 +250,8 @@ div.tab-container > div.tab-panel {
             <tr>
                 <td class="nowrap mid">User:</td>
                 <td class="nowrap"><div>
-                    <input id="auid" class="sidebar-half" type="text" value="username" title="Username" placeholder="username" />&nbsp;
-                    <input id="apwd" class="sidebar-half" type="password" value="password" title="Password" placeholder="password" />
+                    <input id="auid" class="sidebar-half" type="text" value="" title="Username" placeholder="username" />&nbsp;
+                    <input id="apwd" class="sidebar-half" type="password" value="" title="Password" placeholder="password" />
                 </div></td>
                 <td style="float: right">
                     <button type="button" id="btnHelp">Help</button>
@@ -265,14 +262,12 @@ div.tab-container > div.tab-panel {
         <div id="query-tabs" class="tab-container">
             <ul id="query-tabs-list" class="tab-list">
                 <li data-tab-id="1" data-tab-selected="true">Query 1</li>
-                <li data-tab-id="2">Query 2</li>
-                <li data-tab-id="3">Query 3</li>
-                <li data-tab-id="4">Query 4</li>
+                <li data-tab-id="2">+</li>
             </ul>
             <div class="tab-panel" data-tab-id="1" data-tab-selected="true">
                 <table id="commandBar" border="0" style="width: 100%"><tbody>
                     <tr>
-                        <td class="nowrap mid"><input id="intsec" type="checkbox" checked="checked"/>&nbsp;<label for="intsec">Integrated Security</label></td>
+                        <td class="nowrap mid"><label for="intsec"><input id="intsec" type="checkbox" checked="checked"/>&nbsp;Integrated Security</label></td>
                         <td class="nowrap mid"><input id="uid" class="sidebar" type="text" value="" disabled="disabled" placeholder="user ID" title="Connection String User ID" /></td>
                         <td class="nowrap mid"><input id="pwd" class="sidebar" type="password" value="" disabled="disabled" placeholder="password" title="Connection String Password" /></td>
                         <td class="nowrap mid"><label for="timeout">Timeout:&nbsp;<input id="timeout" class="sidebar" type="number" value="30" min="0" max="900" step="10" style="width: 64px; text-align: right" title="Number of seconds to wait for command execution" /></label></td>
@@ -289,11 +284,11 @@ div.tab-container > div.tab-panel {
                             <button type="button" id="btnCancel" disabled="disabled">Cancel</button>&nbsp;
                         </td>
                         <td class="nowrap mid">
-                            <input type="checkbox" id="chkHeadRepeat" checked="checked" /><label for="chkHeadRepeat">&nbsp;Header repeats every&nbsp;</label>
-                            <input type="number" id="numHeadRepeat" value="20" style="width: 56px; text-align: right" min="10" max="2000" step="10" /><label for="numHeadRepeat">&nbsp;rows</label>
+                            <label for="chkHeadRepeat"><input type="checkbox" id="chkHeadRepeat" checked="checked" />&nbsp;Header repeats every&nbsp;</label>
+                            <label for="numHeadRepeat"><input type="number" id="numHeadRepeat" value="20" style="width: 56px; text-align: right" min="10" max="2000" step="10" />&nbsp;rows</label>
                         </td>
                         <td class="nowrap mid">
-                            <input type="checkbox" id="chkRowNumbers" checked="checked" /><label for="chkRowNumbers">&nbsp;Show row rumbers</label>
+                            <label for="chkRowNumbers"><input type="checkbox" id="chkRowNumbers" checked="checked" />&nbsp;Show row rumbers</label>
                         </td>
                         <td class="nowrap mid" style="float: right"><a id="selflink" href="#" style="display: none" title="Open query in new window" target="_blank">link</a></td>
                     </tr>
