@@ -160,6 +160,20 @@ td.rownum {
     padding-left: 2px;
 }
 
+/* Query textarea resizer handle */
+div.resizer-vertical {
+    cursor: ns-resize;
+    background-color: #444;
+    width: 100%;
+    height: 12px;
+    position: absolute;
+    top: 100px;
+}
+
+div.resizer-container {
+    position: relative;
+}
+
 /* tabs */
 div.tab-container > div.tab-panel {
     border: 1px solid gray;
@@ -261,8 +275,10 @@ div.tab-container > div.tab-panel {
                         <td class="nowrap mid" style="float: right"><a id="selflink" href="#" style="display: none" title="Open query in new window" target="_blank">link</a></td>
                     </tr>
                 </tbody></table>
-                <div id="trQuery" style="height: 160px">
-                    <textarea name="query" id="query" style="width: 100%; height: 100%; word-wrap: normal; overflow: auto; resize: none" autofocus="autofocus" spellcheck="false">SELECT 1</textarea>
+                <div id="trQuery" class="resizer-container">
+                    <textarea name="query" id="query" style="width: 100%; height: 97px; word-wrap: normal; overflow: auto; resize: none" autofocus="autofocus" spellcheck="false">SELECT 1</textarea>
+                    <div id="rszQuery" class="resizer-vertical"></div>
+                    <div style="height: 12px"></div>
                 </div>
                 <div id="trResults" style="min-height: 24px">
                     <div style="clear: both; overflow-y: auto">
@@ -372,6 +388,10 @@ function initApp() {
 
     // Window resize:
     bindEvent(window, 'resize', function (e) { resizeResults(); });
+
+    // Query resize bar:
+    var dgQuery = new drag();
+    dgQuery.init({ id: "rszQuery", target: "query", direction: "y", limit: { y: [100, 1080] }, callback: resizeResults });
 
     // Click help button to show facebox:
     bindEvent(find('btnHelp'), 'click', function (e) {
@@ -1063,6 +1083,114 @@ function getBrowserSelectedText() {
     } catch (e) {
         return null;
     }
+}
+
+// Drag-to-resize support:
+
+function addEvent(obj, type, fn) {
+    if (obj.attachEvent) {
+        obj["e" + type + fn] = fn;
+        obj[type + fn] = function () { obj["e" + type + fn](window.event); }
+        obj.attachEvent("on" + type, obj[type + fn]);
+    } else
+        obj.addEventListener(type, fn, false);
+}
+
+function removeEvent(obj, type, fn) {
+    if (obj.detachEvent) {
+        obj.detachEvent("on" + type, obj[type + fn]);
+        obj[type + fn] = null;
+    } else
+        obj.removeEventListener(type, fn, false);
+}
+
+Function.prototype.bind = function (obj) {
+    var _method = this;
+    return function () {
+        return _method.apply(obj, arguments);
+    };
+}
+
+function drag(id) {
+    this.id = "id";
+    this.direction = "xy";
+}
+
+drag.prototype = {
+    init: function (settings) {
+        for (var i in settings) {
+            this[i] = settings[i];
+
+            for (var j in settings[i]) {
+                //if (typeof(this[i][j])=="undefined")
+                this[i][j] = settings[i][j];
+            }
+        }
+
+        this.elem = (this.id.tagName === undefined) ? document.getElementById(this.id) : this.id;
+        this.container = document.getElementById(settings.target) || this.elem.parentNode;
+        this.elem.onmousedown = this._mouseDown.bind(this);
+        this.callback = settings.callback || null;
+    },
+    _mouseDown: function (e) {
+        e = e || window.event;
+
+        this.elem.onselectstart = function () { return false };
+
+        this._event_docMouseMove = this._docMouseMove.bind(this);
+        this._event_docMouseUp = this._docMouseUp.bind(this);
+
+        if (this.onstart) this.onstart();
+        this.x = e.clientX || e.PageX;
+        this.y = e.clientY || e.PageY;
+
+        this.left = parseInt(getstyle(this.elem, "left"));
+        this.top = parseInt(getstyle(this.elem, "top"));
+
+        addEvent(document, 'mousemove', this._event_docMouseMove);
+        addEvent(document, 'mouseup', this._event_docMouseUp);
+
+        return false;
+    },
+    _docMouseMove: function (e) {
+        this.setValuesClick(e);
+        if (this.ondrag) this.ondrag();
+    },
+    _docMouseUp: function (e) {
+        removeEvent(document, 'mousemove', this._event_docMouseMove);
+        if (this.onstop) this.onstop();
+
+        removeEvent(document, 'mouseup', this._event_docMouseUp);
+    },
+    setValuesClick: function (e) {
+        this.mouseX = e.clientX || e.PageX;
+        this.mouseY = e.clientY || e.pageY;
+
+        this.Y = this.top + this.mouseY - this.y;
+        this.Y = limit(this.Y, this.limit.y[0], this.limit.y[1]);
+        this.elem.style.top = this.Y + "px";
+
+        this.container.style.height = (this.Y - 3) + "px";
+        if (this.callback) this.callback();
+    }
+}
+
+function limit(val, mn, mx) {
+    return Math.min(Math.max(val, Math.min(mn, mx)), Math.max(mn, mx));
+}
+
+function getstyle(elem, prop) {
+    if (document.defaultView) {
+        return document.defaultView.getComputedStyle(elem, null).getPropertyValue(prop);
+    }
+    else if (elem.currentStyle) {
+        var prop = prop.replace(/-(\w)/gi, function ($0, $1) {
+            //return $0.charAt($0.length - 1).toUpperCase();
+            return $1.toUpperCase();
+        });
+        return elem.currentStyle[prop];
+    }
+    else return null;
 }
 
 var Base64 = {
