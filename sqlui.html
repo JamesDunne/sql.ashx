@@ -853,6 +853,11 @@ function showQueryResults(rsp) {
                     setStyle(td, 'text-align', 'center');
                 }
 
+                // Nowrap:
+                if (bt == 'datetime' || bt == 'datetime2' || bt == 'datetimeoffset') {
+                    td.classList.add('nowrap');
+                }
+
                 // Right-align numerics:
                 if (bt == 'int' || bt == 'smallint' || bt == 'tinyint') {
                     setStyle(td, 'text-align', 'right');
