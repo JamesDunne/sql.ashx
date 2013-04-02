@@ -419,7 +419,7 @@ function initApp() {
 
     // Query resize bar:
     var dgQuery = new drag();
-    dgQuery.init({ id: "rszQuery", target: "query", direction: "y", limit: { y: [24, 2040] }, callback: resizeResults });
+    dgQuery.init({ id: "rszQuery", target: "query", direction: "y", limit: { y: [12, 2040] }, callback: resizeResults });
 
     // Click help button to show facebox:
     bindEvent(find('btnHelp'), 'click', function (e) {
@@ -818,9 +818,24 @@ function showQueryResults(rsp) {
     // Enumerate all results and create tables for them:
     for (var n = 0; n < rsp.results.length; ++n) {
         var resultset = rsp.results[n];
-        tables.appendChild(text(resultset.rows.length + ' row(s)'));
-        if (resultset.rows.length == 0) {
-            continue;
+
+        var rowsLength = 0;
+        if (resultset.hasRows) {
+            rowsLength = resultset.rows.length;
+        }
+
+        var recordsAffected = -1;
+        if (resultset.recordsAffected !== undefined) {
+            recordsAffected = resultset.recordsAffected;
+        }
+        if (recordsAffected != -1) {
+            // N record(s) affected<br/>
+            tables.appendChild(text('' + recordsAffected + ' record(s) affected'));
+            tables.appendChild(make('br'));
+        } else {
+            // N row(s) returned<br/>
+            tables.appendChild(text('' + rowsLength + ' row(s) returned'));
+            tables.appendChild(make('br'));
         }
 
         // Parse the column info:
@@ -836,7 +851,12 @@ function showQueryResults(rsp) {
 
         var tbody = tbl.appendChild(make('tbody'));
 
-        for (var r = 0; r < resultset.rows.length; ++r) {
+        if (!resultset.hasRows) {
+            // Hack to render just a head row if result set has no rows:
+            rowsLength = 1;
+        }
+
+        for (var r = 0; r < rowsLength; ++r) {
             // Make a head row every N rows or just once:
             if ((repeatHead && (r % repeatHeadEvery == 0)) || (r == 0)) {
                 var headrow = tbody.appendChild(make('tr'));
@@ -845,6 +865,10 @@ function showQueryResults(rsp) {
                     var thnum = headrow.appendChild(make('th'));
                     setTextContent(thnum, '#');
                     setStyle(thnum, 'text-align', 'right');
+                }
+                if (resultset.columns.length == 0) {
+                    var thdummy = headrow.appendChild(make('th'));
+                    setTextContent(thdummy, '(no columns)');
                 }
 
                 for (var i = 0; i < resultset.columns.length; ++i) {
@@ -856,6 +880,8 @@ function showQueryResults(rsp) {
                     setTextContent(th, ci.name);
                 }
             }
+            // Hack to render just a head row if result set has no rows:
+            if (!resultset.hasRows) break;
 
             // Make a data row:
             var tr = tbody.appendChild(make('tr'));

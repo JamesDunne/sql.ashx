@@ -322,19 +322,27 @@ namespace AdHocQuery
                 jtw.WritePropertyName("exec");
                 jtw.WriteValue(swExec.ElapsedMilliseconds);
                 jtw.WritePropertyName("total");
-                jtw.WriteValue((long) (swOpen.Elapsed + swExec.Elapsed).TotalMilliseconds);
+                jtw.WriteValue((long)(swOpen.Elapsed + swExec.Elapsed).TotalMilliseconds);
                 jtw.WriteEndObject();
 
                 // Read the results:
                 using (dr)
                 {
+                    // Write results array:
                     jtw.WritePropertyName("results");
                     jtw.WriteStartArray();
                     if (ctx.pretty == FormatMode.SimpleLines) jtw.WriteWhitespace("\n");
+
                     // Read multiple result-sets:
                     do
                     {
+                        // Start result object:
                         jtw.WriteStartObject();
+
+                        // Report number of records affected for insert/update/exec statements, if applicable.
+                        // Will be -1 for SELECT queries
+                        jtw.WritePropertyName("recordsAffected");
+                        jtw.WriteValue(dr.RecordsAffected);
 
                         // Write column metadata:
                         jtw.WritePropertyName("columns");
@@ -378,38 +386,46 @@ namespace AdHocQuery
                         jtw.WriteEndArray();
                         if (ctx.pretty == FormatMode.SimpleLines) jtw.WriteWhitespace("\n");
 
-                        // Serialize row data:
-                        jtw.WritePropertyName("rows");
-                        jtw.WriteStartArray();
-                        if (ctx.pretty == FormatMode.SimpleLines) jtw.WriteWhitespace("\n");
-#if NET_4_5
-                        while (await dr.ReadAsync())
-#else
-                        while (dr.Read())
-#endif
+                        jtw.WritePropertyName("hasRows");
+                        jtw.WriteValue(dr.HasRows);
+
+                        if (dr.HasRows)
                         {
+                            // Serialize row data:
+                            jtw.WritePropertyName("rows");
                             jtw.WriteStartArray();
-                            for (int i = 0; i < dr.FieldCount; ++i)
+                            if (ctx.pretty == FormatMode.SimpleLines) jtw.WriteWhitespace("\n");
+#if NET_4_5
+                            while (await dr.ReadAsync())
+#else
+                            while (dr.Read())
+#endif
                             {
-                                object value = dr.GetValue(i);
-                                try
+                                jtw.WriteStartArray();
+                                for (int i = 0; i < dr.FieldCount; ++i)
                                 {
-                                    if (value == null || value == DBNull.Value)
-                                        jtw.WriteNull();
-                                    else
-                                        jtw.WriteValue(value);
+                                    object value = dr.GetValue(i);
+                                    try
+                                    {
+                                        if (value == null || value == DBNull.Value)
+                                            jtw.WriteNull();
+                                        else
+                                            jtw.WriteValue(value);
+                                    }
+                                    catch
+                                    {
+                                        // Dunno what happened, but keep going:
+                                        jtw.WriteUndefined();
+                                    }
                                 }
-                                catch
-                                {
-                                    // Dunno what happened, but keep going:
-                                    jtw.WriteUndefined();
-                                }
+                                jtw.WriteEndArray();
+                                if (ctx.pretty == FormatMode.SimpleLines) jtw.WriteWhitespace("\n");
                             }
                             jtw.WriteEndArray();
                             if (ctx.pretty == FormatMode.SimpleLines) jtw.WriteWhitespace("\n");
                         }
-                        jtw.WriteEndArray();
-                        if (ctx.pretty == FormatMode.SimpleLines) jtw.WriteWhitespace("\n");
+
+                        // End of current result object:
                         jtw.WriteEndObject();
                         if (ctx.pretty == FormatMode.SimpleLines) jtw.WriteWhitespace("\n");
 #if NET_4_5
@@ -417,30 +433,33 @@ namespace AdHocQuery
 #else
                     } while (dr.NextResult());
 #endif
+
+                    // End of results array:
                     jtw.WriteEndArray();
+                    // End of response object:
                     jtw.WriteEndObject();
                 }
             }
         }
     }
-    
+
     public static class StringExtensions
     {
         public static string F(this string format, params object[] args)
         {
             return String.Format(format, args);
         }
-        
+
         public static string F(this string format, object arg0)
         {
             return String.Format(format, arg0);
         }
-        
+
         public static string F(this string format, object arg0, object arg1)
         {
             return String.Format(format, arg0, arg1);
         }
-        
+
         public static string F(this string format, object arg0, object arg1, object arg2)
         {
             return String.Format(format, arg0, arg1, arg2);
