@@ -2,7 +2,7 @@
 
 <html>
 <head>
-    <title>SQL Query</title>
+    <title>SQLUI</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style type="text/css">
 /* Full page mode */
@@ -357,20 +357,36 @@ Array.prototype.contains = function (item) {
     return false;
 }
 
-var defaultDsList = ['(local)'];
-
-var getDsList = !supports_html5_storage() ? function () { return defaultDsList; } : function () {
+var tryGetLSItem = !supports_html5_storage() ? function (key) { return undefined; } : function (key) {
     try {
-        var list = localStorage.getItem('sqlui.dsList');
-        if (!list) return defaultDsList;
-        return JSON.parse(list);
+        var item = localStorage.getItem(key);
+        if (!item) return undefined;
+        return JSON.parse(item);
     } catch (e) {
-        return defaultDsList;
+        return undefined;
     }
+};
+
+var setLSItem = !supports_html5_storage() ? function (key, value) { } : function (key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
 }
 
-var setDsList = !supports_html5_storage() ? function () { } : function (dsList) {
-    localStorage.setItem('sqlui.dsList', JSON.stringify(dsList));
+var defaultDsList = ['(local)'];
+
+function getDsList() {
+    var item = tryGetLSItem('sqlui.dsList');
+    return (item === undefined) ? defaultDsList : item;
+}
+
+function setDsList(dsList) { setLSItem('sqlui.dsList', dsList); }
+
+function persistAuth() {
+    // Store successful auth username/password for default usage:
+    try {
+        setLSItem('sqlui.auth', { uid: v('auid'), pwd: v('apwd') });
+    } catch (e) {
+        // don't care.
+    }
 }
 
 var queryXhr = null;
@@ -383,6 +399,18 @@ function initApp() {
     var dsList = getDsList();
     loadDataSources(dsList);
 
+    // Attempt to prepopulate the auth values for username/password:
+    var auth = tryGetLSItem('sqlui.auth');
+    if (auth !== undefined) {
+        try {
+            v('auid', auth.uid);
+            v('apwd', auth.pwd);
+        } catch (e) {
+            v('auid', '');
+            v('apwd', '');
+        }
+    }
+
     // Parse the query string and pre-populate fields:
     prepopulate();
 
@@ -391,7 +419,7 @@ function initApp() {
 
     // Query resize bar:
     var dgQuery = new drag();
-    dgQuery.init({ id: "rszQuery", target: "query", direction: "y", limit: { y: [100, 1080] }, callback: resizeResults });
+    dgQuery.init({ id: "rszQuery", target: "query", direction: "y", limit: { y: [24, 2040] }, callback: resizeResults });
 
     // Click help button to show facebox:
     bindEvent(find('btnHelp'), 'click', function (e) {
@@ -579,6 +607,8 @@ function initApp() {
                     // don't care.
                 }
 
+                persistAuth();
+
                 // Fill the catalogs <datalist>:
                 var dbs = find('catalogs');
                 clearAllChildren(dbs);
@@ -712,6 +742,9 @@ function showQueryResultsError(rsp) {
             // TODO: make clickable to select line in textarea!
             setTextContent(ul.appendChild(make('li')), rsp.errors[i].message);
         }
+
+        // Likely not an 'Unauthorized' error so we can safely persist the username/password:
+        persistAuth();
     } else {
         // single error:
         setTextContent(ul.appendChild(make('li')), rsp.error);
@@ -723,6 +756,9 @@ function showQueryResultsError(rsp) {
             auid.classList.add('highlight');
             apwd.classList.add('highlight');
             auid.focus();
+        } else {
+            // Not an 'Unauthorized' error so we can safely persist the username/password:
+            persistAuth();
         }
     }
 
