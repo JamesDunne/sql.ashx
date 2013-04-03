@@ -853,6 +853,8 @@ function parseColumnInfo(raw) {
 }
 
 function showQueryResults(rsp) {
+    persistAuth();
+
     var tables = find('tables');
     clearAllChildren(tables);
 
