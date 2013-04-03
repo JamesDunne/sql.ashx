@@ -111,8 +111,9 @@ namespace AdHocQuery
                     jtw.WriteStartObject();
                     jtw.WritePropertyName("success");
                     jtw.WriteValue(false);
-                    jtw.WritePropertyName("error");
-                    jtw.WriteValue("Unauthorized");
+                    jtw.StartErrorsArray();
+                    jtw.WriteSingleErrorObject("Unauthorized");
+                    jtw.EndErrorsArray();
                     jtw.WriteEndObject();
                     return;
                 }
@@ -125,8 +126,9 @@ namespace AdHocQuery
                     jtw.WriteStartObject();
                     jtw.WritePropertyName("success");
                     jtw.WriteValue(false);
-                    jtw.WritePropertyName("error");
-                    jtw.WriteValue("Unauthorized");
+                    jtw.StartErrorsArray();
+                    jtw.WriteSingleErrorObject("Unauthorized");
+                    jtw.EndErrorsArray();
                     jtw.WriteEndObject();
                     return;
                 }
@@ -138,8 +140,9 @@ namespace AdHocQuery
                     jtw.WriteStartObject();
                     jtw.WritePropertyName("success");
                     jtw.WriteValue(false);
-                    jtw.WritePropertyName("error");
-                    jtw.WriteValue("HTTP method must be POST");
+                    jtw.StartErrorsArray();
+                    jtw.WriteSingleErrorObject("HTTP method must be POST");
+                    jtw.EndErrorsArray();
                     jtw.WriteEndObject();
                     return;
                 }
@@ -161,8 +164,9 @@ namespace AdHocQuery
                         jtw.WriteStartObject();
                         jtw.WritePropertyName("success");
                         jtw.WriteValue(false);
-                        jtw.WritePropertyName("error");
-                        jtw.WriteValue("Bad value for $upgrade; expecting filename");
+                        jtw.StartErrorsArray();
+                        jtw.WriteSingleErrorObject("Bad value for $upgrade; expecting filename");
+                        jtw.EndErrorsArray();
                         jtw.WriteEndObject();
                         return;
                     }
@@ -232,6 +236,27 @@ namespace AdHocQuery
             }
         }
 
+        void WriteSQLErrors(JsonTextWriter jtw, SqlException sqex)
+        {
+            if (sqex == null) return;
+
+            foreach (SqlError err in sqex.Errors)
+            {
+                jtw.WriteStartObject();
+                jtw.WritePropertyName("message");
+                jtw.WriteValue(err.Message);
+                jtw.WritePropertyName("number");
+                jtw.WriteValue(err.Number);
+                jtw.WritePropertyName("line");
+                jtw.WriteValue(err.LineNumber);
+                jtw.WritePropertyName("procedure");
+                jtw.WriteValue(err.Procedure);
+                jtw.WritePropertyName("server");
+                jtw.WriteValue(err.Server);
+                jtw.WriteEndObject();
+            }
+        }
+
         void ReportException(Context ctx, Exception ex)
         {
             ctx.rsp.StatusCode = 400;
@@ -242,32 +267,19 @@ namespace AdHocQuery
             jtw.WritePropertyName("success");
             jtw.WriteValue(false);
 
-            jtw.WritePropertyName("error");
-            jtw.WriteValue(ex.Message);
+            jtw.StartErrorsArray();
 
             SqlException sqex = ex as SqlException;
-            if (sqex != null)
+            if (ex != null)
             {
-                jtw.WritePropertyName("errors");
-                jtw.WriteStartArray();
-                foreach (SqlError err in sqex.Errors)
-                {
-                    jtw.WriteStartObject();
-                    jtw.WritePropertyName("message");
-                    jtw.WriteValue(err.Message);
-                    jtw.WritePropertyName("number");
-                    jtw.WriteValue(err.Number);
-                    jtw.WritePropertyName("line");
-                    jtw.WriteValue(err.LineNumber);
-                    jtw.WritePropertyName("procedure");
-                    jtw.WriteValue(err.Procedure);
-                    jtw.WritePropertyName("server");
-                    jtw.WriteValue(err.Server);
-                    jtw.WriteEndObject();
-                }
-                jtw.WriteEndArray();
+                WriteSQLErrors(jtw, ex as SqlException);
+            }
+            else
+            {
+                jtw.WriteSingleErrorObject(ex.Message);
             }
 
+            jtw.EndErrorsArray();
             jtw.WriteEndObject();
         }
 
@@ -293,8 +305,9 @@ namespace AdHocQuery
                 jtw.WriteStartObject();
                 jtw.WritePropertyName("success");
                 jtw.WriteValue(false);
-                jtw.WritePropertyName("error");
-                jtw.WriteValue("Empty POST body; expecting a SQL query");
+                jtw.StartErrorsArray();
+                jtw.WriteSingleErrorObject("Empty POST body; expecting a SQL query");
+                jtw.EndErrorsArray();
                 jtw.WriteEndObject();
                 return;
             }
@@ -357,8 +370,16 @@ namespace AdHocQuery
                     return;
                 }
 
+                // Start writing a response:
+                jtw.WriteStartObject();
+
+                // 'success' is wishy-washy here because a multi-statement query may contain successful results and also error results
+                jtw.WritePropertyName("success");
+                jtw.WriteValue(true);
+
                 // Execute the query:
-                SqlDataReader dr;
+                SqlDataReader dr = null;
+                SqlException sqex = null;
                 swExec = System.Diagnostics.Stopwatch.StartNew();
                 try
                 {
@@ -369,17 +390,11 @@ namespace AdHocQuery
 #endif
                     swExec.Stop();
                 }
-                catch (Exception ex)
+                catch (SqlException ex)
                 {
                     swExec.Stop();
-                    ReportException(ctx, ex);
-                    return;
+                    sqex = ex;
                 }
-
-                // Start writing a successful response:
-                jtw.WriteStartObject();
-                jtw.WritePropertyName("success");
-                jtw.WriteValue(true);
 
                 // Write timing information:
                 jtw.WritePropertyName("timing");
@@ -392,24 +407,56 @@ namespace AdHocQuery
                 jtw.WriteValue((long)(swOpen.Elapsed + swExec.Elapsed).TotalMilliseconds);
                 jtw.WriteEndObject();
 
+                // Write results array:
+                jtw.WritePropertyName("results");
+                jtw.WriteStartArray();
+                if (ctx.pretty == FormatMode.SimpleLines) jtw.WriteWhitespace("\n");
+
+                if (sqex != null)
+                {
+                    // Start result object:
+                    jtw.WriteStartObject();
+
+                    jtw.WritePropertyName("success");
+                    jtw.WriteValue(false);
+
+                    jtw.StartErrorsArray();
+                    WriteSQLErrors(jtw, sqex);
+                    jtw.EndErrorsArray();
+
+                    jtw.WriteEndObject();
+
+                    // If the first statement fails, no others after it are executed.
+                    goto endOfResults;
+                }
+
                 // Read the results:
                 using (dr)
                 {
-                    // Write results array:
-                    jtw.WritePropertyName("results");
-                    jtw.WriteStartArray();
-                    if (ctx.pretty == FormatMode.SimpleLines) jtw.WriteWhitespace("\n");
-
+                    int lastRecordsAffected = 0;
                     // Read multiple result-sets:
-                    do
+                    bool hasNextResult = true;
+                    while (hasNextResult)
                     {
                         // Start result object:
                         jtw.WriteStartObject();
 
+                        jtw.WritePropertyName("success");
+                        jtw.WriteValue(true);
+
                         // Report number of records affected for insert/update/exec statements, if applicable.
                         // Will be -1 for SELECT queries
                         jtw.WritePropertyName("recordsAffected");
-                        jtw.WriteValue(dr.RecordsAffected);
+                        if (dr.RecordsAffected == -1)
+                        {
+                            jtw.WriteValue(-1);
+                        }
+                        else
+                        {
+                            jtw.WriteValue(dr.RecordsAffected - lastRecordsAffected);
+                        }
+
+                        lastRecordsAffected = dr.RecordsAffected;
 
                         // Write column metadata:
                         jtw.WritePropertyName("columns");
@@ -495,18 +542,75 @@ namespace AdHocQuery
                         // End of current result object:
                         jtw.WriteEndObject();
                         if (ctx.pretty == FormatMode.SimpleLines) jtw.WriteWhitespace("\n");
-#if NET_4_5
-                    } while (await dr.NextResultAsync());
-#else
-                    } while (dr.NextResult());
-#endif
 
-                    // End of results array:
-                    jtw.WriteEndArray();
-                    // End of response object:
-                    jtw.WriteEndObject();
+                        // Check if there's another result:
+                        bool retry = false;
+                        do
+                        {
+                            try
+                            {
+                                // NextResult() throws a SqlException to represent the errors of the next statement.
+#if NET_4_5
+                                hasNextResult = await dr.NextResultAsync();
+#else
+                                hasNextResult = dr.NextResult();
+#endif
+                                retry = false;
+                            }
+                            catch (SqlException ex)
+                            {
+                                jtw.WriteStartObject();
+                                jtw.WritePropertyName("success");
+                                jtw.WriteValue(false);
+                                jtw.StartErrorsArray();
+                                WriteSQLErrors(jtw, ex);
+                                jtw.EndErrorsArray();
+                                jtw.WriteEndObject();
+                                retry = true;
+                            }
+                            catch (Exception ex)
+                            {
+                                jtw.WriteStartObject();
+                                jtw.WritePropertyName("success");
+                                jtw.WriteValue(false);
+                                jtw.StartErrorsArray();
+                                jtw.WriteSingleErrorObject(ex.Message);
+                                jtw.EndErrorsArray();
+                                jtw.WriteEndObject();
+                                retry = true;
+                            }
+                        } while (retry);
+                    }
                 }
+
+            endOfResults:
+                // End of results array:
+                jtw.WriteEndArray();
+                // End of response object:
+                jtw.WriteEndObject();
             }
+        }
+    }
+
+    public static class JsonTextWriterExtensions
+    {
+        public static void StartErrorsArray(this JsonTextWriter jtw)
+        {
+            jtw.WritePropertyName("errors");
+            jtw.WriteStartArray();
+        }
+
+        public static void EndErrorsArray(this JsonTextWriter jtw)
+        {
+            jtw.WriteEndArray();
+        }
+
+        public static void WriteSingleErrorObject(this JsonTextWriter jtw, string message)
+        {
+            jtw.WriteStartObject();
+            jtw.WritePropertyName("message");
+            jtw.WriteValue(message);
+            jtw.WriteEndObject();
         }
     }
 

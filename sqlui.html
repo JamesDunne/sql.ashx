@@ -785,27 +785,28 @@ function showQueryResultsError(rsp) {
     var ul = find('ulErrors');
     clearAllChildren(ul);
     if (rsp.errors) {
+        var authOkay = true;
+
         // multiple errors:
         for (var i = 0; i < rsp.errors.length; ++i) {
+            var errmsg = rsp.errors[i].message;
+
+            if (errmsg === 'Unauthorized') {
+                // highlight the auid/apwd controls:
+                var auid = find('auid');
+                var apwd = find('apwd');
+                auid.classList.add('highlight');
+                apwd.classList.add('highlight');
+                auid.focus();
+                authOkay = false;
+            }
+
             // TODO: make clickable to select line in textarea!
-            setTextContent(ul.appendChild(make('li')), rsp.errors[i].message);
+            setTextContent(ul.appendChild(make('li')), errmsg);
         }
 
-        // Likely not an 'Unauthorized' error so we can safely persist the username/password:
-        persistAuth();
-    } else {
-        // single error:
-        setTextContent(ul.appendChild(make('li')), rsp.error);
-
-        if (rsp.error === 'Unauthorized') {
-            // highlight the auid/apwd controls:
-            var auid = find('auid');
-            var apwd = find('apwd');
-            auid.classList.add('highlight');
-            apwd.classList.add('highlight');
-            auid.focus();
-        } else {
-            // Not an 'Unauthorized' error so we can safely persist the username/password:
+        // Don't persist auth info when Unauthorized:
+        if (authOkay) {
             persistAuth();
         }
     }
@@ -852,6 +853,11 @@ function parseColumnInfo(raw) {
     return ci;
 }
 
+function pluralize(num, plural, singular) {
+    if (num == 1) return singular;
+    return plural;
+}
+
 function showQueryResults(rsp) {
     persistAuth();
 
@@ -869,7 +875,17 @@ function showQueryResults(rsp) {
 
     // Enumerate all results and create tables for them:
     for (var n = 0; n < rsp.results.length; ++n) {
+        tables.appendChild(make('hr'));
+
         var resultset = rsp.results[n];
+        if (!resultset.success) {
+            var errorsUL = make('ul');
+            for (var i = 0; i < resultset.errors.length; ++i) {
+                errorsUL.appendChild(setTextContent(make('li'), resultset.errors[i].message));
+            }
+            tables.appendChild(errorsUL);
+            continue;
+        }
 
         var rowsLength = 0;
         if (resultset.hasRows) {
@@ -882,11 +898,12 @@ function showQueryResults(rsp) {
         }
         if (recordsAffected != -1) {
             // N record(s) affected<br/>
-            tables.appendChild(text('' + recordsAffected + ' record(s) affected'));
+            tables.appendChild(text('' + recordsAffected + pluralize(recordsAffected, ' records', ' record') + ' affected'));
             tables.appendChild(make('br'));
-        } else {
+        }
+        {
             // N row(s) returned<br/>
-            tables.appendChild(text('' + rowsLength + ' row(s) returned'));
+            tables.appendChild(text('' + rowsLength + pluralize(rowsLength, ' rows', ' row') + ' returned'));
             tables.appendChild(make('br'));
         }
 
@@ -1144,11 +1161,13 @@ function v(id, setValue) {
 function clearAllChildren(el) {
     while (el.firstChild)
         el.removeChild(el.firstChild);
+    return el;
 }
 
 function setTextContent(el, text) {
     clearAllChildren(el);
     el.appendChild(document.createTextNode(text));
+    return el;
 }
 
 function getParameterByName(name) {
