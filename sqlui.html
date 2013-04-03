@@ -390,6 +390,15 @@ function persistAuth() {
 }
 
 var queryXhr = null;
+function cancelQuery() {
+    if (queryXhr === null) return;
+    queryXhr.abort();
+
+    queryXhr = null;
+    find('btnConnect').disabled = false;
+    find('btnExecute').disabled = false;
+    find('btnCancel').disabled = true;
+}
 
 function initApp() {
     getDeviceWidth();
@@ -457,13 +466,7 @@ function initApp() {
 
     // Cancel:
     bindEvent(find('btnCancel'), 'click', function (e) {
-        if (queryXhr === null) return;
-        queryXhr.abort();
-
-        queryXhr = null;
-        find('btnConnect').disabled = false;
-        find('btnExecute').disabled = false;
-        find('btnCancel').disabled = true;
+        cancelQuery();
     });
 
     // Update link:
@@ -477,13 +480,22 @@ function initApp() {
     // whole-page keyboard shorcuts:
     bindEvent(document.body, 'keydown', function (e) {
         if (!e.ctrlKey) {
+            // F5 - execute query
             if (e.keyCode === 116) {
                 // e.keyIdentifier == "F5"
-                // F5 - execute query
                 e.preventDefault();
                 executeHighlightedQuery();
                 return true;
             }
+
+            // ESC key cancels current outstanding query if any:
+            if (e.keyCode === 27) {
+                e.preventDefault();
+
+                cancelQuery();
+                return true;
+            }
+
             return false;
         }
 
@@ -527,6 +539,12 @@ function initApp() {
         // Stop the browser from responding to the keystroke:
         e.preventDefault();
 
+        if (queryXhr !== null) {
+            alert('A query is already executing. Please wait or cancel it.');
+            find('btnCancel').disabled = false;
+            return true;
+        }
+
         queryXhr = runQuery({
             query: query,
             rowcount: 0,
@@ -541,6 +559,14 @@ function initApp() {
 
     // textarea keyboard shortcuts:
     bindEvent(find('query'), 'keydown', function (e) {
+        // ESC key cancels current outstanding query if any:
+        if (e.keyCode === 27) {
+            e.preventDefault();
+
+            cancelQuery();
+            return true;
+        }
+
         if (!e.ctrlKey) {
             return false;
         }
@@ -565,6 +591,12 @@ function initApp() {
 
         // Stop the browser from responding to the keystroke:
         e.preventDefault();
+
+        if (queryXhr !== null) {
+            alert('A query is already executing. Please wait or cancel it.');
+            find('btnCancel').disabled = false;
+            return true;
+        }
 
         queryXhr = runQuery({
             query: query,
