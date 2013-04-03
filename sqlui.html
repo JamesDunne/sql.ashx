@@ -2,7 +2,7 @@
 
 <html>
 <head>
-    <title>SQLUI</title>
+    <title id="appTitle">SQL</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style type="text/css">
 /* Full page mode */
@@ -1076,6 +1076,8 @@ function runQuery(opts) {
             if (this.status != 200) {
                 error(rsp);
             } else {
+                // Set the title:
+                setTextContent(find('appTitle'), 'SQL (' + ds + ' - ' + ic + ')');
                 success(rsp);
             }
         } catch (ex) { }

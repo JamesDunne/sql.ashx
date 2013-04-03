@@ -112,7 +112,7 @@ namespace AdHocQuery
                     jtw.WritePropertyName("success");
                     jtw.WriteValue(false);
                     jtw.StartErrorsArray();
-                    jtw.WriteSingleErrorObject("Unauthorized");
+                    jtw.WriteErrorMessage("Unauthorized");
                     jtw.EndErrorsArray();
                     jtw.WriteEndObject();
                     return;
@@ -127,7 +127,7 @@ namespace AdHocQuery
                     jtw.WritePropertyName("success");
                     jtw.WriteValue(false);
                     jtw.StartErrorsArray();
-                    jtw.WriteSingleErrorObject("Unauthorized");
+                    jtw.WriteErrorMessage("Unauthorized");
                     jtw.EndErrorsArray();
                     jtw.WriteEndObject();
                     return;
@@ -141,7 +141,7 @@ namespace AdHocQuery
                     jtw.WritePropertyName("success");
                     jtw.WriteValue(false);
                     jtw.StartErrorsArray();
-                    jtw.WriteSingleErrorObject("HTTP method must be POST");
+                    jtw.WriteErrorMessage("HTTP method must be POST");
                     jtw.EndErrorsArray();
                     jtw.WriteEndObject();
                     return;
@@ -165,7 +165,7 @@ namespace AdHocQuery
                         jtw.WritePropertyName("success");
                         jtw.WriteValue(false);
                         jtw.StartErrorsArray();
-                        jtw.WriteSingleErrorObject("Bad value for $upgrade; expecting filename");
+                        jtw.WriteErrorMessage("Bad value for $upgrade; expecting filename");
                         jtw.EndErrorsArray();
                         jtw.WriteEndObject();
                         return;
@@ -236,27 +236,6 @@ namespace AdHocQuery
             }
         }
 
-        void WriteSQLErrors(JsonTextWriter jtw, SqlException sqex)
-        {
-            if (sqex == null) return;
-
-            foreach (SqlError err in sqex.Errors)
-            {
-                jtw.WriteStartObject();
-                jtw.WritePropertyName("message");
-                jtw.WriteValue(err.Message);
-                jtw.WritePropertyName("number");
-                jtw.WriteValue(err.Number);
-                jtw.WritePropertyName("line");
-                jtw.WriteValue(err.LineNumber);
-                jtw.WritePropertyName("procedure");
-                jtw.WriteValue(err.Procedure);
-                jtw.WritePropertyName("server");
-                jtw.WriteValue(err.Server);
-                jtw.WriteEndObject();
-            }
-        }
-
         void ReportException(Context ctx, Exception ex)
         {
             ctx.rsp.StatusCode = 400;
@@ -268,18 +247,9 @@ namespace AdHocQuery
             jtw.WriteValue(false);
 
             jtw.StartErrorsArray();
-
-            SqlException sqex = ex as SqlException;
-            if (ex != null)
-            {
-                WriteSQLErrors(jtw, ex as SqlException);
-            }
-            else
-            {
-                jtw.WriteSingleErrorObject(ex.Message);
-            }
-
+            jtw.WriteErrorObjects(ex);
             jtw.EndErrorsArray();
+
             jtw.WriteEndObject();
         }
 
@@ -299,14 +269,14 @@ namespace AdHocQuery
 #else
             string query = new StreamReader(req.InputStream, Encoding.UTF8, false).ReadToEnd();
 #endif
-            if (query.IsNullOrEmpty())
+            if (String.IsNullOrEmpty(query))
             {
                 rsp.StatusCode = 400;
                 jtw.WriteStartObject();
                 jtw.WritePropertyName("success");
                 jtw.WriteValue(false);
                 jtw.StartErrorsArray();
-                jtw.WriteSingleErrorObject("Empty POST body; expecting a SQL query");
+                jtw.WriteErrorMessage("Empty POST body; expecting a SQL query");
                 jtw.EndErrorsArray();
                 jtw.WriteEndObject();
                 return;
@@ -345,7 +315,7 @@ namespace AdHocQuery
                     rowcount = 100;
                 if (rowcount < 0) rowcount = 0;
 
-                cmd.CommandText = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\r\nSET ROWCOUNT {0};\r\n{1}".F(rowcount, query);
+                cmd.CommandText = String.Format("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\r\nSET ROWCOUNT {0};\r\n{1}", rowcount, query);
                 cmd.CommandType = CommandType.Text;
                 cmd.CommandTimeout = cmdTimeout;
 
@@ -376,6 +346,17 @@ namespace AdHocQuery
                 // 'success' is wishy-washy here because a multi-statement query may contain successful results and also error results
                 jtw.WritePropertyName("success");
                 jtw.WriteValue(true);
+
+                // Write server details:
+                jtw.WritePropertyName("server");
+                jtw.WriteStartObject();
+                jtw.WritePropertyName("dataSource");
+                jtw.WriteValue(cn.DataSource);
+                jtw.WritePropertyName("database");
+                jtw.WriteValue(cn.Database);
+                jtw.WritePropertyName("version");
+                jtw.WriteValue(cn.ServerVersion);
+                jtw.WriteEndObject();
 
                 // Execute the query:
                 SqlDataReader dr = null;
@@ -421,7 +402,7 @@ namespace AdHocQuery
                     jtw.WriteValue(false);
 
                     jtw.StartErrorsArray();
-                    WriteSQLErrors(jtw, sqex);
+                    jtw.WriteErrorObjects(sqex);
                     jtw.EndErrorsArray();
 
                     jtw.WriteEndObject();
@@ -465,7 +446,7 @@ namespace AdHocQuery
                         var dst = dr.GetSchemaTable();
 #if false
                         for (int i = 0; i < dst.Columns.Count; ++i)
-                            jtw.WriteValue("{0} : {1}".F(dst.Columns[i].ColumnName, dst.Columns[i].DataType.FullName));
+                            jtw.WriteValue(String.Format("{0} : {1}", dst.Columns[i].ColumnName, dst.Columns[i].DataType.FullName));
 #else
                         for (int i = 0; i < dr.FieldCount; ++i)
                         {
@@ -482,18 +463,18 @@ namespace AdHocQuery
                                 case "binary":
                                 case "char":
                                 case "nchar":
-                                    precision = "({0})".F(colsize == Int32.MaxValue ? "max" : colsize.ToString());
+                                    precision = String.Format("({0})", colsize == Int32.MaxValue ? "max" : colsize.ToString());
                                     break;
                                 case "datetime2":
                                 case "datetimeoffset":
-                                    precision = "({0})".F(dstRow["NumericScale"]);
+                                    precision = String.Format("({0})", dstRow["NumericScale"]);
                                     break;
                                 default:
                                     break;
                             }
                             bool allowNull = (bool)dstRow["AllowDBNull"];
                             if (!allowNull) precision += " NOT NULL";
-                            jtw.WriteValue("[{0}] {1}{2}".F(colname, typename, precision));
+                            jtw.WriteValue(String.Format("[{0}] {1}{2}", colname, typename, precision));
                             if (ctx.pretty == FormatMode.SimpleLines) jtw.WriteWhitespace("\n");
                         }
 #endif
@@ -557,24 +538,14 @@ namespace AdHocQuery
 #endif
                                 retry = false;
                             }
-                            catch (SqlException ex)
-                            {
-                                jtw.WriteStartObject();
-                                jtw.WritePropertyName("success");
-                                jtw.WriteValue(false);
-                                jtw.StartErrorsArray();
-                                WriteSQLErrors(jtw, ex);
-                                jtw.EndErrorsArray();
-                                jtw.WriteEndObject();
-                                retry = true;
-                            }
                             catch (Exception ex)
                             {
+                                // Write out a results object to represent the statement's errors:
                                 jtw.WriteStartObject();
                                 jtw.WritePropertyName("success");
                                 jtw.WriteValue(false);
                                 jtw.StartErrorsArray();
-                                jtw.WriteSingleErrorObject(ex.Message);
+                                jtw.WriteErrorObjects(ex);
                                 jtw.EndErrorsArray();
                                 jtw.WriteEndObject();
                                 retry = true;
@@ -605,40 +576,44 @@ namespace AdHocQuery
             jtw.WriteEndArray();
         }
 
-        public static void WriteSingleErrorObject(this JsonTextWriter jtw, string message)
+        public static void WriteErrorMessage(this JsonTextWriter jtw, string message)
         {
             jtw.WriteStartObject();
             jtw.WritePropertyName("message");
             jtw.WriteValue(message);
             jtw.WriteEndObject();
         }
-    }
 
-    public static class StringExtensions
-    {
-        public static string F(this string format, params object[] args)
+        public static void WriteErrorObjects(this JsonTextWriter jtw, Exception ex)
         {
-            return String.Format(format, args);
-        }
-
-        public static string F(this string format, object arg0)
-        {
-            return String.Format(format, arg0);
-        }
-
-        public static string F(this string format, object arg0, object arg1)
-        {
-            return String.Format(format, arg0, arg1);
-        }
-
-        public static string F(this string format, object arg0, object arg1, object arg2)
-        {
-            return String.Format(format, arg0, arg1, arg2);
-        }
-
-        public static bool IsNullOrEmpty(this string s)
-        {
-            return String.IsNullOrEmpty(s);
+            SqlException sqex = ex as SqlException;
+            if (sqex != null)
+            {
+                foreach (SqlError err in sqex.Errors)
+                {
+                    jtw.WriteStartObject();
+                    jtw.WritePropertyName("message");
+                    jtw.WriteValue(err.Message);
+                    jtw.WritePropertyName("number");
+                    jtw.WriteValue(err.Number);
+                    jtw.WritePropertyName("line");
+                    jtw.WriteValue(err.LineNumber);
+                    jtw.WritePropertyName("procedure");
+                    jtw.WriteValue(err.Procedure);
+                    jtw.WritePropertyName("server");
+                    jtw.WriteValue(err.Server);
+                    jtw.WriteEndObject();
+                }
+            }
+            else
+            {
+                jtw.WriteStartObject();
+                jtw.WritePropertyName("message");
+                jtw.WriteValue(ex.Message);
+                jtw.WritePropertyName("type");
+                jtw.WriteValue(ex.GetType().FullName);
+                jtw.WriteEndObject();
+            }
         }
     }
 }
