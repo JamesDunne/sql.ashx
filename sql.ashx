@@ -169,10 +169,12 @@ namespace AdHocQuery
 
                     const string sourceURL = "https://raw.github.com/JamesDunne/sql.ashx/master/";
 #if NET_4_5
+                    string etag = null;
                     try
                     {
                         // Create an HTTP request to raw.github.com to download the latest version:
                         var ghrsp = await System.Net.HttpWebRequest.CreateHttp(sourceURL + toUpgrade).GetResponseAsync();
+                        etag = ghrsp.Headers["ETag"];
 
                         // Find out the current directory for overwriting:
                         string thisPath = System.IO.Path.GetDirectoryName(context.Server.MapPath(req.AppRelativeCurrentExecutionFilePath));
@@ -198,6 +200,8 @@ namespace AdHocQuery
                     jtw.WriteValue(true);
                     jtw.WritePropertyName("upgraded");
                     jtw.WriteValue(toUpgrade);
+                    jtw.WritePropertyName("etag");
+                    jtw.WriteValue(etag);
                     jtw.WriteEndObject();
                     return;
 #else

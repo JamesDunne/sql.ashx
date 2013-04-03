@@ -419,7 +419,7 @@ function initApp() {
 
     // Query resize bar:
     var dgQuery = new drag();
-    dgQuery.init({ id: "rszQuery", target: "query", direction: "y", limit: { y: [12, 2040] }, callback: resizeResults });
+    dgQuery.init({ id: "rszQuery", target: "query", direction: "y", limit: { y: [16, 2040] }, callback: resizeResults });
 
     // Click help button to show facebox:
     bindEvent(find('btnHelp'), 'click', function (e) {
@@ -461,6 +461,7 @@ function initApp() {
         queryXhr.abort();
 
         queryXhr = null;
+        find('btnConnect').disabled = false;
         find('btnExecute').disabled = false;
         find('btnCancel').disabled = true;
     });
@@ -579,6 +580,12 @@ function initApp() {
 
     // Connect:
     bindEvent(find('btnConnect'), 'click', function (e) {
+        if (queryXhr !== null) {
+            alert('A query is already executing. Please wait or cancel it.');
+            find('btnCancel').disabled = false;
+            return;
+        }
+
         var auid = find('auid');
         var apwd = find('apwd');
         auid.classList.remove('highlight');
@@ -586,11 +593,20 @@ function initApp() {
         hide('divErrors');
         resizeResults();
 
-        runQuery({
+        queryXhr = runQuery({
             query:   'SELECT [name],[database_id] FROM sys.databases ORDER BY [name] ASC',
             ic:      'master',
-            before:  function () { find('btnConnect').disabled = true; },
-            after:   function () { find('btnConnect').disabled = false; },
+            before: function () {
+                find('btnConnect').disabled = true;
+                find('btnExecute').disabled = true;
+                find('btnCancel').disabled = false;
+            },
+            after: function () {
+                queryXhr = null;
+                find('btnConnect').disabled = false;
+                find('btnExecute').disabled = false;
+                find('btnCancel').disabled = true;
+            },
             error:   showQueryResultsError,
             success: function (rsp) {
                 // Add to the dsList:
@@ -774,12 +790,14 @@ function showQueryResultsBefore() {
     hide('tables');
     hide('divErrors');
     hide('txtMsec');
+    find('btnConnect').disabled = true;
     find('btnExecute').disabled = true;
     find('btnCancel').disabled = false;
 }
 
 function showQueryResultsAfter() {
     queryXhr = null;
+    find('btnConnect').disabled = false;
     find('btnExecute').disabled = false;
     find('btnCancel').disabled = true;
     resizeResults();
