@@ -144,11 +144,74 @@ namespace AdHocQuery
                     return;
                 }
 
-                // Should be successful from here on out:
+                // Default to successful from here on out:
                 rsp.StatusCode = 200;
                 rsp.AddHeader("Access-Control-Allow-Origin", "*");
 
                 var ctx = new Context(req, rsp, jtw, pretty);
+
+                // Self-upgrade function; downloads latest version of files from github
+                var toUpgrade = req.QueryString["$upgrade"];
+                if (toUpgrade != null)
+                {
+                    // Make sure $upgrade is a filename:
+                    if (toUpgrade.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) != -1)
+                    {
+                        rsp.StatusCode = 400;
+                        jtw.WriteStartObject();
+                        jtw.WritePropertyName("success");
+                        jtw.WriteValue(false);
+                        jtw.WritePropertyName("error");
+                        jtw.WriteValue("Bad value for $upgrade; expecting filename");
+                        jtw.WriteEndObject();
+                        return;
+                    }
+
+                    const string sourceURL = "https://raw.github.com/JamesDunne/sql.ashx/master/";
+#if NET_4_5
+                    try
+                    {
+                        // Create an HTTP request to raw.github.com to download the latest version:
+                        var ghrsp = await System.Net.HttpWebRequest.CreateHttp(sourceURL + toUpgrade).GetResponseAsync();
+
+                        // Find out the current directory for overwriting:
+                        string thisPath = System.IO.Path.GetDirectoryName(context.Server.MapPath(req.AppRelativeCurrentExecutionFilePath));
+                        string dlPath = System.IO.Path.Combine(thisPath, toUpgrade);
+
+                        // Open the target file for overwriting:
+                        using (var file = System.IO.File.Open(dlPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                        // Get the HTTP response:
+                        using (var ghrspstr = ghrsp.GetResponseStream())
+                        {
+                            // Copy the HTTP stream to the local file:
+                            await ghrspstr.CopyToAsync(file);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ReportException(ctx, ex);
+                        return;
+                    }
+
+                    jtw.WriteStartObject();
+                    jtw.WritePropertyName("success");
+                    jtw.WriteValue(true);
+                    jtw.WritePropertyName("upgraded");
+                    jtw.WriteValue(toUpgrade);
+                    jtw.WriteEndObject();
+                    return;
+#else
+                    // TODO
+                    jtw.WriteStartObject();
+                    jtw.WritePropertyName("success");
+                    jtw.WriteValue(false);
+                    jtw.WritePropertyName("error");
+                    jtw.WriteValue("TODO: implement");
+                    jtw.WriteEndObject();
+                    return;
+#endif
+                }
+
                 try
                 {
                     // Run the query text from the POST request body and serialize output as we read results from SQL:
