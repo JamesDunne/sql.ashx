@@ -854,8 +854,8 @@ function parseColumnInfo(raw) {
 }
 
 function pluralize(num, plural, singular) {
-    if (num == 1) return singular;
-    return plural;
+    if (num == 1) return '' + num + ' ' + singular;
+    return '' + num + ' ' + plural;
 }
 
 function showQueryResults(rsp) {
@@ -887,6 +887,8 @@ function showQueryResults(rsp) {
             continue;
         }
 
+        var tableid = 'resultTable_' + n;
+
         var rowsLength = 0;
         if (resultset.hasRows) {
             rowsLength = resultset.rows.length;
@@ -898,14 +900,13 @@ function showQueryResults(rsp) {
         }
         if (recordsAffected != -1) {
             // N record(s) affected<br/>
-            tables.appendChild(text('' + recordsAffected + pluralize(recordsAffected, ' records', ' record') + ' affected'));
+            tables.appendChild(text(pluralize(recordsAffected, 'records', 'record') + ' affected'));
             tables.appendChild(make('br'));
         }
-        {
-            // N row(s) returned<br/>
-            tables.appendChild(text('' + rowsLength + pluralize(rowsLength, ' rows', ' row') + ' returned'));
-            tables.appendChild(make('br'));
-        }
+
+        // N row(s) returned<br/>
+        tables.appendChild(text(pluralize(rowsLength, 'rows', 'row') + ' returned'));
+        tables.appendChild(make('br'));
 
         // Parse the column info:
         var colInfos = new Array(resultset.columns.length);
@@ -914,6 +915,7 @@ function showQueryResults(rsp) {
 
         // Make the table:
         var tbl = make('table');
+        tbl.setAttribute('id', tableid);
         tbl.classList.add('tblResults');
         tbl.setAttribute('border', '1');
         setStyle(tbl, 'width', find('query').clientWidth + ' px');
@@ -985,7 +987,7 @@ function showQueryResults(rsp) {
                 }
 
                 // Nowrap:
-                if (bt == 'datetime' || bt == 'datetime2' || bt == 'datetimeoffset') {
+                if (bt == 'datetime' || bt == 'datetime2' || bt == 'datetimeoffset' || bt == 'uniqueidentifier') {
                     td.classList.add('nowrap');
                 }
 
@@ -1077,7 +1079,7 @@ function runQuery(opts) {
                 error(rsp);
             } else {
                 // Set the title:
-                setTextContent(find('appTitle'), 'SQL (' + ds + ' - ' + ic + ')');
+                setTextContent(find('appTitle'), '' + ic + ' (' + ds + ') - SQL');
                 success(rsp);
             }
         } catch (ex) { }
@@ -1091,15 +1093,20 @@ function runQuery(opts) {
 function find(id) { return document.getElementById(id); }
 function make(tag) { return document.createElement(tag); }
 function text(text) { return document.createTextNode(text); }
+function setAttribute(el, prop, value) {
+    el.setAttribute(prop, value);
+    return el;
+}
 function setStyle(el, prop, value) {
     if (el.style.setProperty !== undefined)
         el.style.setProperty(prop, value);
     else
         el.style.setAttribute(prop, value);
+    return el;
 }
 
 // Alternatively, try `visibility` style.
-function hide(id) { setStyle(find(id), 'display', 'none'); }
+function hide(id) { return setStyle(find(id), 'display', 'none'); }
 function show(id) {
     var obj = find(id);
 
@@ -1111,7 +1118,7 @@ function show(id) {
             disp = 'table-cell';
     }
 
-    setStyle(obj, 'display', disp);
+    return setStyle(obj, 'display', disp);
 }
 function toggle(id) {
     var obj = find(id);
