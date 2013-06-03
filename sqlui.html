@@ -307,6 +307,10 @@ div.tab-container > div.tab-panel {
                         <dd>Execute highlighted query</dd>
                     </dl>
                     <dl>
+                        <dt>SHIFT-F5</dt>
+                        <dd>Execute highlighted query in DDL mode (for CREATE, ALTER, DROP, etc. DDL statements)</dd>
+                    </dl>
+                    <dl>
                         <dt>CTRL-1</dt>
                         <dd>List tables</dd>
                     </dl>
@@ -484,7 +488,9 @@ function initApp() {
             if (e.keyCode === 116) {
                 // e.keyIdentifier == "F5"
                 e.preventDefault();
-                executeHighlightedQuery();
+                // SHIFT-F5 = DDL mode
+                var ddlMode = e.shiftKey || false;
+                executeHighlightedQuery(ddlMode);
                 return true;
             }
 
@@ -760,7 +766,7 @@ function prepopulate() {
     }
 }
 
-function executeHighlightedQuery() {
+function executeHighlightedQuery(ddlMode) {
     if (queryXhr !== null) {
         alert('A query is already executing. Please wait or cancel it.');
         find('btnCancel').disabled = false;
@@ -773,6 +779,7 @@ function executeHighlightedQuery() {
     // Execute query asynchronously:
     queryXhr = runQuery({
         query: query,
+        ddlMode: ddlMode || false,
         rowcount: v('rowcount'),
         before: showQueryResultsBefore,
         after: showQueryResultsAfter,
@@ -1056,6 +1063,8 @@ function runQuery(opts) {
     var rowcount = opts.rowcount || 0;
     var tmout = opts.timeout || v('timeout') || 30;
 
+    var ddlMode = opts.ddlMode || false;
+
     var query = opts.query;
     var error = opts.error;
     var success = opts.success;
@@ -1066,7 +1075,8 @@ function runQuery(opts) {
         '&ic=' + encodeURIComponent(ic) +
         (intsec ? '' : ('&uid=' + encodeURIComponent(uid) + '&pwd=' + encodeURIComponent(pwd))) +
         '&tmout=' + encodeURIComponent(tmout) +
-        '&rowcount=' + encodeURIComponent(rowcount);
+        // NOTE(jsd): SET ROWCOUNT does not apply in DDL mode:
+        (ddlMode ? '&ddl=1' : '&rowcount=' + encodeURIComponent(rowcount));
 
     var xhr = new XMLHttpRequest();
     xhr.open('POST', url, true);

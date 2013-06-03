@@ -1,4 +1,4 @@
-﻿<%@ WebHandler Language="C#" Class="AdHocQuery.SqlServiceProvider" %>
+<%@ WebHandler Language="C#" Class="AdHocQuery.SqlServiceProvider" %>
 <%@ Assembly Name="System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" %>
 <%@ Assembly Name="System.Data, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" %>
 /*
@@ -38,8 +38,49 @@ namespace AdHocQuery
     public class SqlServiceProvider : IHttpHandler
 #endif
     {
-        const string httpBasicAuth_Username = "username";
-        const string httpBasicAuth_Password = "password";
+        [Flags]
+        enum AccessFlags
+        {
+            ReadOnly = 0,
+
+            Write = 1 << 0,
+            DDL = 1 << 1,
+            Upgrade = 1 << 2,
+
+            All = Write | DDL | Upgrade,
+            ReadWrite = Write,
+        }
+
+        sealed class BasicAuthCredential
+        {
+            public readonly string Username;
+            public readonly string Password;
+            public readonly string MD5Hash;
+            public readonly AccessFlags Access;
+
+            public bool HasAccess(AccessFlags access)
+            {
+                return (Access & access) == access;
+            }
+
+            public BasicAuthCredential(string username, string password, AccessFlags access)
+            {
+                Username = username;
+                Password = password;
+                MD5Hash = Convert.ToBase64String(Encoding.ASCII.GetBytes(username + ":" + password));
+                Access = access;
+            }
+        }
+
+        /// <summary>
+        /// Set of authorized username:password pairs and their access rights.
+        /// </summary>
+        static readonly BasicAuthCredential[] httpBasicAuthUsers = new BasicAuthCredential[]
+        {
+            new BasicAuthCredential("username", "password", AccessFlags.All),
+            new BasicAuthCredential("guestro", "guest", AccessFlags.ReadOnly),
+            new BasicAuthCredential("guestrw", "guest", AccessFlags.ReadWrite),
+        };
 
         enum FormatMode
         {
@@ -84,6 +125,7 @@ namespace AdHocQuery
             // Create a JsonTextWriter to manually stream out the response as we can:
             using (var jtw = new JsonTextWriter(context.Response.Output))
             {
+
                 FormatMode pretty = FormatMode.NoWhitespace;
                 int prettyInt;
                 if (Int32.TryParse(req.QueryString["pretty"], out prettyInt))
@@ -120,7 +162,8 @@ namespace AdHocQuery
 
                 // Check the username:password
                 string b64up = auth.Substring(6);
-                if (b64up != Convert.ToBase64String(Encoding.ASCII.GetBytes(httpBasicAuth_Username + ":" + httpBasicAuth_Password)))
+                var user = httpBasicAuthUsers.FirstOrDefault(u => u.MD5Hash == b64up);
+                if (user == null)
                 {
                     rsp.StatusCode = 403;
                     jtw.WriteStartObject();
@@ -157,6 +200,19 @@ namespace AdHocQuery
                 var toUpgrade = req.QueryString["$upgrade"];
                 if (toUpgrade != null)
                 {
+                    if (!user.HasAccess(AccessFlags.Upgrade))
+                    {
+                        rsp.StatusCode = 403;
+                        jtw.WriteStartObject();
+                        jtw.WritePropertyName("success");
+                        jtw.WriteValue(false);
+                        jtw.StartErrorsArray();
+                        jtw.WriteErrorMessage("Unauthorized");
+                        jtw.EndErrorsArray();
+                        jtw.WriteEndObject();
+                        return;
+                    }
+
                     // Make sure $upgrade is a filename:
                     if (toUpgrade.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) != -1)
                     {
@@ -224,7 +280,7 @@ namespace AdHocQuery
                 {
                     // Run the query text from the POST request body and serialize output as we read results from SQL:
 #if NET_4_5
-                    await RunQuery(ctx);
+                    await RunQuery(ctx, user);
 #else
                     RunQuery(ctx);
 #endif
@@ -253,8 +309,35 @@ namespace AdHocQuery
             jtw.WriteEndObject();
         }
 
+        static bool? ParseBoolish(string value)
+        {
+            if (String.IsNullOrEmpty(value) == null) return null;
+
+            int intish;
+            if (Int32.TryParse(value, out intish))
+            {
+                return intish != 0;
+            }
+
+            bool boolish;
+            if (Boolean.TryParse(value, out boolish))
+            {
+                return boolish;
+            }
+
+            if (String.Equals(value, "y", StringComparison.OrdinalIgnoreCase)) return true;
+            if (String.Equals(value, "yes", StringComparison.OrdinalIgnoreCase)) return true;
+            if (String.Equals(value, "on", StringComparison.OrdinalIgnoreCase)) return true;
+
+            if (String.Equals(value, "n", StringComparison.OrdinalIgnoreCase)) return false;
+            if (String.Equals(value, "no", StringComparison.OrdinalIgnoreCase)) return false;
+            if (String.Equals(value, "off", StringComparison.OrdinalIgnoreCase)) return false;
+
+            return null;
+        }
+
 #if NET_4_5
-        async Task RunQuery(Context ctx)
+        async Task RunQuery(Context ctx, BasicAuthCredential user)
 #else
         void RunQuery(Context ctx)
 #endif
@@ -262,6 +345,21 @@ namespace AdHocQuery
             var req = ctx.req;
             var rsp = ctx.rsp;
             var jtw = ctx.jtw;
+
+            // "DDL" mode allows CREATE, ALTER, DROP, etc. statements by dropping the initial SET commands.
+            bool ddlMode = ParseBoolish(req.QueryString["ddl"]) ?? false;
+            if (ddlMode && !user.HasAccess(AccessFlags.DDL))
+            {
+                rsp.StatusCode = 403;
+                jtw.WriteStartObject();
+                jtw.WritePropertyName("success");
+                jtw.WriteValue(false);
+                jtw.StartErrorsArray();
+                jtw.WriteErrorMessage("Unauthorized");
+                jtw.EndErrorsArray();
+                jtw.WriteEndObject();
+                return;
+            }
 
             // Read SQL query from HTTP request body:
 #if NET_4_5
@@ -281,6 +379,8 @@ namespace AdHocQuery
                 jtw.WriteEndObject();
                 return;
             }
+
+            // TODO(jsd): Validate query does not contain obvious attempts to insert/update/delete for read-only access!
 
             // Build the connection string:
             var csb = new SqlConnectionStringBuilder();
@@ -315,7 +415,12 @@ namespace AdHocQuery
                     rowcount = 100;
                 if (rowcount < 0) rowcount = 0;
 
-                cmd.CommandText = String.Format("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\r\nSET ROWCOUNT {0};\r\n{1}", rowcount, query);
+                // "DDL" mode allows CREATE, ALTER, DROP, etc. statements by dropping the initial SET commands.
+                if (ddlMode)
+                    cmd.CommandText = query;
+                else
+                    cmd.CommandText = String.Format("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\r\nSET ROWCOUNT {0};\r\n{1}", rowcount, query);
+
                 cmd.CommandType = CommandType.Text;
                 cmd.CommandTimeout = cmdTimeout;
 
