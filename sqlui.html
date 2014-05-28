@@ -404,6 +404,110 @@ function cancelQuery() {
     find('btnCancel').disabled = true;
 }
 
+// Handles keydown events for `document.body`:
+function body_keydown(e) {
+    if (e.keyCode === 17) return false;
+
+    if (!e.ctrlKey) {
+        // F5 - execute query
+        if (e.keyCode === 116) {
+            // e.keyIdentifier == "F5"
+            e.preventDefault();
+            // SHIFT-F5 = DDL mode
+            var ddlMode = e.shiftKey || false;
+            executeHighlightedQuery(ddlMode);
+            return true;
+        }
+
+        // ESC key cancels current outstanding query if any:
+        if (e.keyCode === 27) {
+            e.preventDefault();
+
+            cancelQuery();
+            return true;
+        }
+
+        return false;
+    }
+
+    // Pick text out from the user's selection in the browser (e.g. for selecting data from query results)
+    var highlighted = getBrowserSelectedText();
+    // Fall back to selected text from query editor:
+    if (highlighted == "") highlighted = getSelectedQueryText();
+
+    var rowcount = 0;
+    var query = null;
+    // Disable header repetition by default, leave all other options up to user:
+    var opts = { repeatHead: false, repeatHeadEvery: undefined, showRowNumber: undefined };
+
+    if (e.keyCode === '0'.charCodeAt(0)) {
+        // CTRL-0: `SELECT * FROM [...]`
+        query = 'SELECT * FROM ' + highlighted;
+        // Limit to user rowcount:
+        rowcount = v('rowcount');
+    } else if (e.keyCode === '1'.charCodeAt(0)) {
+        // CTRL-1: List tables
+        query = 'SELECT (sch.[name] + N\'.\' + o.[name]) AS table_name,o.create_date,o.modify_date FROM sys.tables o JOIN sys.schemas sch ON sch.schema_id = o.schema_id ORDER BY 1 ASC';
+    } else if (e.keyCode === '2'.charCodeAt(0)) {
+        // CTRL-2: List views
+        query = 'SELECT (sch.[name] + N\'.\' + o.[name]) AS view_name,o.create_date,o.modify_date FROM sys.views o JOIN sys.schemas sch ON sch.schema_id = o.schema_id ORDER BY 1 ASC';
+    } else if (e.keyCode === '3'.charCodeAt(0)) {
+        // CTRL-3: List procedures
+        query = 'SELECT (sch.[name] + N\'.\' + o.[name]) AS sproc_name,o.create_date,o.modify_date FROM sys.procedures o JOIN sys.schemas sch ON sch.schema_id = o.schema_id ORDER BY 1 ASC';
+    } else if (e.keyCode === '4'.charCodeAt(0)) {
+        // CTRL-4: List functions
+        query = 'SELECT (sch.[name] + N\'.\' + o.[name]) AS function_name,o.create_date,o.modify_date FROM sys.objects o JOIN sys.schemas sch ON sch.schema_id = o.schema_id WHERE [type] IN (\'FN\',\'TF\',\'IF\') ORDER BY 1 ASC';
+    } else if (e.keyCode === '5'.charCodeAt(0)) {
+        // CTRL-5: Show definition text
+        if (!highlighted) {
+            // A highlighted word is required.
+            e.preventDefault();
+            return true;
+        }
+        query = 'SELECT [definition] AS \'' + highlighted.replace('\'', '\'\'') + '\' FROM sys.sql_modules WHERE object_id = object_id(\'' + highlighted.replace('\'', '\'\'') + '\')';
+        // Disable row numbers:
+        opts.showRowNumber = false;
+    } else if (e.keyCode === '6'.charCodeAt(0)) {
+        // CTRL-6: Show columns
+        if (!highlighted) {
+            // A highlighted word is required.
+            e.preventDefault();
+            return true;
+        }
+        query =
+              'SELECT (sch.[name] + N\'.\' + o.[name]) AS object_name, o.type_desc as object_type_desc, col.column_id, col.name as column_name, ty.name as column_type, col.is_nullable, col.max_length, col.precision, col.scale, col.is_identity\n'
+            + 'FROM sys.objects o\n'
+            + 'JOIN sys.schemas sch ON sch.schema_id = o.schema_id\n'
+            + 'JOIN sys.columns col ON col.object_id = o.object_id\n'
+            + 'JOIN sys.types ty ON ty.user_type_id = col.user_type_id\n'
+            + 'WHERE o.object_id = object_id(\'' + highlighted.replace('\'', '\'\'') + '\')\n'
+            + 'ORDER BY col.column_id ASC';
+    } else {
+        // Unknown keyboard shortcut:
+        return false;
+    }
+
+    // Stop the browser from responding to the keystroke:
+    e.preventDefault();
+
+    if (queryXhr !== null) {
+        alert('A query is already executing. Please wait or cancel it.');
+        find('btnCancel').disabled = false;
+        return true;
+    }
+
+    queryXhr = runQuery({
+        query: query,
+        rowcount: rowcount,
+        before: showQueryResultsBefore,
+        after: showQueryResultsAfter,
+        error: showQueryResultsError,
+        success: function (rsp) { return showQueryResults(rsp, opts); }
+    });
+
+    return true;
+}
+
 function initApp() {
     getDeviceWidth();
     getDeviceHeight();
@@ -482,139 +586,7 @@ function initApp() {
     });
 
     // whole-page keyboard shorcuts:
-    bindEvent(document.body, 'keydown', function (e) {
-        if (!e.ctrlKey) {
-            // F5 - execute query
-            if (e.keyCode === 116) {
-                // e.keyIdentifier == "F5"
-                e.preventDefault();
-                // SHIFT-F5 = DDL mode
-                var ddlMode = e.shiftKey || false;
-                executeHighlightedQuery(ddlMode);
-                return true;
-            }
-
-            // ESC key cancels current outstanding query if any:
-            if (e.keyCode === 27) {
-                e.preventDefault();
-
-                cancelQuery();
-                return true;
-            }
-
-            return false;
-        }
-
-        // Pick text out from the user's selection in the browser (e.g. for selecting data from query results)
-        var highlighted = getBrowserSelectedText();
-
-        var query = null;
-
-        if (e.keyCode === '1'.charCodeAt(0)) {
-            // CTRL-1: List tables
-            query = 'SELECT [name] AS table_name,create_date,modify_date FROM sys.tables ORDER BY [name] ASC';
-        } else if (e.keyCode === '2'.charCodeAt(0)) {
-            // CTRL-2: List views
-            query = 'SELECT [name] AS view_name,create_date,modify_date FROM sys.views ORDER BY [name] ASC';
-        } else if (e.keyCode === '3'.charCodeAt(0)) {
-            // CTRL-3: List procedures
-            query = 'SELECT [name] AS sproc_name,create_date,modify_date FROM sys.procedures ORDER BY [name] ASC';
-        } else if (e.keyCode === '4'.charCodeAt(0)) {
-            // CTRL-4: List functions
-            query = 'SELECT [name] AS function_name,create_date,modify_date FROM sys.objects WHERE [type] IN (\'FN\',\'TF\',\'IF\') ORDER BY [name] ASC';
-        } else if (e.keyCode === '5'.charCodeAt(0)) {
-            // CTRL-5: sp_helptext;
-            if (!highlighted) {
-                // A highlighted word is required.
-                e.preventDefault();
-                return true;
-            }
-            query = 'EXEC sp_helptext \'' + highlighted.replace('\'', '\'\'') + '\'';
-        } else if (e.keyCode === '6'.charCodeAt(0)) {
-            // CTRL-6: sp_columns;
-            if (!highlighted) {
-                // A highlighted word is required.
-                e.preventDefault();
-                return true;
-            }
-            query = 'EXEC sp_columns \'' + highlighted.replace('\'', '\'\'') + '\'';
-        } else {
-            return false;
-        }
-
-        // Stop the browser from responding to the keystroke:
-        e.preventDefault();
-
-        if (queryXhr !== null) {
-            alert('A query is already executing. Please wait or cancel it.');
-            find('btnCancel').disabled = false;
-            return true;
-        }
-
-        queryXhr = runQuery({
-            query: query,
-            rowcount: 0,
-            before: showQueryResultsBefore,
-            after: showQueryResultsAfter,
-            error: showQueryResultsError,
-            success: showQueryResults
-        });
-
-        return true;
-    });
-
-    // textarea keyboard shortcuts:
-    bindEvent(find('query'), 'keydown', function (e) {
-        // ESC key cancels current outstanding query if any:
-        if (e.keyCode === 27) {
-            e.preventDefault();
-
-            cancelQuery();
-            return true;
-        }
-
-        if (!e.ctrlKey) {
-            return false;
-        }
-
-        var highlighted = getSelectedQueryText();
-        var query = null;
-        var rowcount = 0;   // unlimited
-
-        if (e.keyCode === '0'.charCodeAt(0)) {
-            // CTRL-0: `SELECT * FROM [...]`
-            query = 'SELECT * FROM ' + highlighted;
-            rowcount = v('rowcount');
-        } else if (e.keyCode === '5'.charCodeAt(0)) {
-            // CTRL-5: sp_helptext;
-            query = 'EXEC sp_helptext \'' + highlighted.replace('\'', '\'\'') + '\'';
-        } else if (e.keyCode === '6'.charCodeAt(0)) {
-            // CTRL-6: sp_columns;
-            query = 'EXEC sp_columns \'' + highlighted.replace('\'', '\'\'') + '\'';
-        }
-
-        if (query === null) return false;
-
-        // Stop the browser from responding to the keystroke:
-        e.preventDefault();
-
-        if (queryXhr !== null) {
-            alert('A query is already executing. Please wait or cancel it.');
-            find('btnCancel').disabled = false;
-            return true;
-        }
-
-        queryXhr = runQuery({
-            query: query,
-            rowcount: rowcount,
-            before: showQueryResultsBefore,
-            after: showQueryResultsAfter,
-            error: showQueryResultsError,
-            success: showQueryResults
-        });
-
-        return true;
-    });
+    bindEvent(document.body, 'keydown', body_keydown);
 
     // Connect:
     bindEvent(find('btnConnect'), 'click', function (e) {
@@ -865,15 +837,17 @@ function pluralize(num, plural, singular) {
     return '' + num + ' ' + plural;
 }
 
-function showQueryResults(rsp) {
+function showQueryResults(rsp, opts) {
     persistAuth();
+
+    opts = opts !== undefined ? opts : { repeatHead: undefined, repeatHeadEvery: undefined, showRowNumber: undefined };
 
     var tables = find('tables');
     clearAllChildren(tables);
 
-    var repeatHead = v('chkHeadRepeat');
-    var repeatHeadEvery = v('numHeadRepeat');
-    var showRowNumber = v('chkRowNumbers');
+    var repeatHead = opts.repeatHead !== undefined ? opts.repeatHead : v('chkHeadRepeat');
+    var repeatHeadEvery = opts.repeatHeadEvery !== undefined ? opts.repeatHeadEvery : v('numHeadRepeat');
+    var showRowNumber = opts.showRowNumber !== undefined ? opts.showRowNumber : v('chkRowNumbers');
 
     // Display timing:
     if (rsp.timing) {

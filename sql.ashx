@@ -13,6 +13,8 @@ NOTE(jsd): Use these versions for .NET 2.0 to 3.5:
 
 // Requires Newtonsoft.Json
 
+// IMPORTANT!!! Go to line 83 and change the default username/password!
+
 #define NET_4_5
 
 using System;
@@ -77,9 +79,8 @@ namespace AdHocQuery
         /// </summary>
         static readonly BasicAuthCredential[] httpBasicAuthUsers = new BasicAuthCredential[]
         {
-            new BasicAuthCredential("username", "password", AccessFlags.All),
-            new BasicAuthCredential("guestro", "guest", AccessFlags.ReadOnly),
-            new BasicAuthCredential("guestrw", "guest", AccessFlags.ReadWrite),
+            // FIXME: Change this for your own private installation!!!
+            new BasicAuthCredential("admin", "password", AccessFlags.All)
         };
 
         enum FormatMode
